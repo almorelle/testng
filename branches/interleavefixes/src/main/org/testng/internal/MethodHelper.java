@@ -477,7 +477,7 @@ public class MethodHelper {
 
   static public Graph<ITestNGMethod> topologicalSort(ITestNGMethod[] methods,
       List<ITestNGMethod> sequentialList, List<ITestNGMethod> parallelList) {
-    Graph<ITestNGMethod> result = new Graph<ITestNGMethod>();
+    Graph<ITestNGMethod> result = new Graph<ITestNGMethod>(new Graph.DefaultClassBasedClassifier<ITestNGMethod>());
 
     //
     // Create the graph

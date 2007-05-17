@@ -21,29 +21,35 @@ public class DepBugSampleTest {
   }
   
   public static List<String> getLog() {
+    System.out.println("getLog");
     return m_log;
   }
 
   @BeforeClass
   public void setup() throws Exception {
     log("setup");
+    System.out.println("setup");
   }
 
   @AfterClass
   public void destroy() throws Exception {
+    System.out.println("destroy");
     log("destroy");
   }
 
   @Test(dependsOnMethods = "send")
   public void get() throws Exception {
+    System.out.println("get");
     log("get");
   }
 
   public void send() throws Exception {
+    System.out.println("send");
     log("send");
   }
 
   public void list() throws Exception {
+    System.out.println("list");
     log("list");
   }
 }

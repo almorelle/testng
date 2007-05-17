@@ -136,7 +136,7 @@ public abstract class BaseTestMethod implements ITestNGMethod {
    * {@inheritDoc}
    */
   public Object[] getInstances() {
-    return m_testClass.getInstances(false);
+    return m_testClass != null ? m_testClass.getInstances(false) : null;
   }
 
   /**

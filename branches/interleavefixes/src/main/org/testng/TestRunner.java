@@ -568,7 +568,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   }
   
   public void privateRun(XmlTest xmlTest) {
-    Map<String, String> params = xmlTest.getParameters();
+//    Map<String, String> params = xmlTest.getParameters();
 
     //
     // Calculate the lists of tests that can be run in sequence and in parallel
@@ -577,6 +577,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     List<ITestNGMethod> parallelList= new ArrayList<ITestNGMethod>();
 
     computeTestLists(sequentialList, parallelList);
+    
     
     log(3, "Found " + (sequentialList.size() + parallelList.size()) + " applicable methods");
     
@@ -587,38 +588,12 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     
     ClassMethodMap cmm = new ClassMethodMap(m_allTestMethods);
     
-    // All the sequential tests are place in one worker, guaranteeing they
-    // will be invoked sequentially
-    if (sequentialList.size() > 0) {
-      for (List<ITestNGMethod> sl : sequentialList) {        
-        workers.add(new TestMethodWorker(m_invoker,
-                                         methodsToMethodInstances(sl),
-                                         m_xmlTest.getSuite(),
-                                         params,
-                                         m_allTestMethods,
-                                         m_groupMethods,
-                                         cmm,
-                                         this));
-      }
-    }
+    createSequentialWorkers(sequentialList, xmlTest.getParameters(), cmm, workers);
+
 
     // All the parallel tests are placed in a separate worker, so they can be
     // invoked in parallel
-    if (parallelList.size() > 0) {
-      for (ITestNGMethod tm : parallelList) {
-        List<MethodInstance> methodInstances = methodsToMultipleMethodInstances(Arrays.asList(new ITestNGMethod[] {tm}));
-        for (MethodInstance mi : methodInstances) {
-          workers.add(new TestMethodWorker(m_invoker,
-                                           new MethodInstance[] { mi },
-                                           m_xmlTest.getSuite(),
-                                           params,
-                                           m_allTestMethods,
-                                           m_groupMethods,
-                                           cmm,
-                                           this));
-        }
-      }
-    }
+    createParallelWorkers(parallelList, xmlTest.getParameters(), cmm, workers);
 
     try {
       runWorkers(workers, xmlTest.getParallel());
@@ -628,7 +603,72 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     }
   }
 
-  private List<MethodInstance> methodsToMultipleMethodInstances(List<ITestNGMethod> sl) {
+  private void createParallelWorkers(List<ITestNGMethod> parallel, 
+      Map<String, String> params, ClassMethodMap cmm, List<TestMethodWorker> workers) {
+
+    if(parallel.isEmpty()) return;
+    
+    List<MethodInstance> methodInstances = new ArrayList<MethodInstance>();
+    for (ITestNGMethod tm : parallel) {
+      methodInstances.addAll(methodsToMultipleMethodInstances(tm));
+    }
+    
+    //
+    // Finally, sort the parallel methods by classes
+    //
+    Collections.sort(methodInstances, MethodInstance.SORT_BY_CLASS);
+
+    if (getVerbose() >= 2) {
+      log(3, "WILL BE RUN IN RANDOM ORDER:");
+      for (MethodInstance mi : methodInstances) {
+        log(3, "  " + mi.getMethod());
+      }
+      log(3, "===");
+    }
+
+    for (MethodInstance mi : methodInstances) {
+      workers.add(new TestMethodWorker(m_invoker,
+                                       new MethodInstance[] { mi },
+                                       m_xmlTest.getSuite(),
+                                       params,
+                                       m_allTestMethods,
+                                       m_groupMethods,
+                                       cmm,
+                                       this));
+    }
+
+  }
+  
+  private void createSequentialWorkers(List<List<ITestNGMethod>> sequentialList, 
+      Map<String, String> params, ClassMethodMap cmm, List<TestMethodWorker> workers) {
+    if(sequentialList.isEmpty()) return;
+    
+    // All the sequential tests are place in one worker, guaranteeing they
+    // will be invoked sequentially
+    for (List<ITestNGMethod> sl : sequentialList) {        
+      workers.add(new TestMethodWorker(m_invoker,
+                                       methodsToMethodInstances(sl),
+                                       m_xmlTest.getSuite(),
+                                       params,
+                                       m_allTestMethods,
+                                       m_groupMethods,
+                                       cmm,
+                                       this));
+    }
+    if (getVerbose() >= 2) {
+      log(3, "WILL BE RUN SEQUENTIALLY:");
+      for (List<ITestNGMethod> l : sequentialList) {
+        for (ITestNGMethod tm : l) {
+          log(3, "  " + tm);
+        }
+        log(3, "====");
+      }
+      
+      log(3, "===");
+    }
+  }
+  
+  private List<MethodInstance> methodsToMultipleMethodInstances(ITestNGMethod... sl) {
     List<MethodInstance> vResult = new ArrayList<MethodInstance>();
     for (ITestNGMethod m : sl) {
       Object[] instances = m.getTestClass().getInstances(true);
@@ -817,32 +857,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
       sl.add(sequentialList);
     }
     
-    for (List<ITestNGMethod> l : sequentialAttributeList.values()) {
-      sl.add(l);
-    }
-    
-    //
-    // Finally, sort the parallel methods by classes
-    //
-
-    Collections.sort(parallelList, TestNGMethod.SORT_BY_CLASS);
-
-    if (getVerbose() >= 2) {
-      log(3, "WILL BE RUN IN RANDOM ORDER:");
-      for (ITestNGMethod tm : parallelList) {
-        log(3, "  " + tm);
-      }
-
-      log(3, "WILL BE RUN SEQUENTIALLY:");
-      for (List<ITestNGMethod> l : sl) {
-        for (ITestNGMethod tm : l) {
-          log(3, "  " + tm);
-        }
-        log(3, "====");
-      }
-      
-      log(3, "===");
-    }
+    sl.addAll(sequentialAttributeList.values());
   }
 
   /**

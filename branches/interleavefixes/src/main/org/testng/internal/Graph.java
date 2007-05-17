@@ -2,22 +2,35 @@ package org.testng.internal;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.testng.ITestNGMethod;
 import org.testng.TestNGException;
 /**
  * Simple graph class to implement topological sort (used to sort methods based on what groups
  * they depend on).
  *
  * @author Cedric Beust, Aug 19, 2004
+ * @author <a href='mailto:the[dot]mindstorm[at]gmail[dot]com'>Alex Popescu</a>
  */
 public class Graph<T extends Object> {
   private static boolean m_verbose = false;
   private Map<T, Node<T>> m_nodes = new HashMap<T, Node<T>>();
   private List<T> m_strictlySortedNodes = null;
+  private Classifier<T> m_classifier;
+  private boolean m_useClassifier= false;
+  
+  public Graph() {
+  }
+  
+  public Graph(Classifier<T> classifier) {
+    m_classifier= classifier;
+    m_useClassifier= true;
+  }
   
   //  A map of nodes that are not the predecessors of any node
   // (not needed for the algorithm but convenient to calculate
@@ -26,14 +39,10 @@ public class Graph<T extends Object> {
 
   public void addNode(T tm) {
     ppp("ADDING NODE " + tm + " " + tm.hashCode());
-    m_nodes.put(tm, new Node<T>(tm));
-    // Initially, all the nodes are put in the independent list as well
+    Node<T> n= new Node<T>(tm);
+    m_nodes.put(tm, n);
   }
-  
-  /*private boolean hasBeenSorted() {
-    return null != m_strictlySortedNodes;
-  }*/
-  
+
   public boolean isIndependent(T object) {
     return m_independentNodes.containsKey(object);
   }
@@ -95,9 +104,13 @@ public class Graph<T extends Object> {
     //
     List<Node<T>> nodes2 = new ArrayList<Node<T>>();
     for (Node<T> n : getNodes()) {
-      if (! isIndependent((T) n.getObject())) {
+      if (! isIndependent(n.getObject())) {
         ppp("ADDING FOR SORT: " + n.getObject());
-        nodes2.add(n.clone());
+        Node<T> clone= n.clone();
+        nodes2.add(clone);
+        if(m_useClassifier) {
+          m_classifier.store(clone);
+        }
       }
       else {
         ppp("SKIPPING INDEPENDENT NODE " + n);
@@ -107,19 +120,22 @@ public class Graph<T extends Object> {
     //
     // Sort
     //
+    Node<T> lastSolved= null;
     while (! nodes2.isEmpty()) {
       
       //
       // Find all the nodes that don't have any predecessors, add
       // them to the result and mark them for removal
       //
-      Node<T> node = findNodeWithNoPredecessors(nodes2);
+      Node<T> node = findNodeWithNoPredecessors(nodes2, lastSolved);
       if (null == node) {
         throw new TestNGException("Cyclic graph of methods");
       }
       else {
-        m_strictlySortedNodes.add((T) node.getObject());
+        ppp("  NOPREDEC: " + node);
+        m_strictlySortedNodes.add(node.getObject());
         removeFromNodes(nodes2, node);
+        lastSolved= node;
       }
     }
 
@@ -150,6 +166,9 @@ public class Graph<T extends Object> {
    */
   private void removeFromNodes(List<Node<T>> nodes, Node<T> node) {
     nodes.remove(node);
+    if(m_useClassifier) {
+      m_classifier.remove(node);
+    }
     for (Node<T> n : nodes) {
       n.removePredecessor(node.getObject());
     }
@@ -161,9 +180,20 @@ public class Graph<T extends Object> {
     }
   }
   
-  private Node<T> findNodeWithNoPredecessors(List<Node<T>> nodes) {
+  private Node<T> findNodeWithNoPredecessors(List<Node<T>> nodes, Node<T> classNode) {
+    if(null != classNode && m_useClassifier) {
+      Collection<Node<T>> sameClassNodes= m_classifier.getSameClassNodes(classNode.getObject());
+      ppp("  SAME CLASS: " + sameClassNodes);
+      for(Node<T> n : sameClassNodes) {
+        if(! n.hasPredecessors()) {
+          ppp(" RETURN FROM SAME CLASS: " + n);
+          return n;
+        }
+      }
+    }
     for (Node<T> n : nodes) {
       if (! n.hasPredecessors()) {
+        ppp(" RETURN NO CLASS: " + n);
         return n;
       }
     }
@@ -264,7 +294,7 @@ public class Graph<T extends Object> {
       if (null != pred) {
         result = null != m_predecessors.remove(o);
         if (result) {
-          ppp("  REMOVED PRED " + o + " FROM NODE " + m_object);
+          ppp("  REMOVED PRED " + o + " FROM NODE " + m_object + " P:" + m_predecessors);
         }
         else {
           ppp("  FAILED TO REMOVE PRED " + o + " FROM NODE " + m_object);        
@@ -372,4 +402,80 @@ public class Graph<T extends Object> {
     ppp("TESTS PASSED");
   }
   
+  public static interface Classifier<T extends Object> {
+    void store(Node<T> n);
+
+    Collection<Node<T>> getSameClassNodes(T n);
+    
+    void remove(Node<T> n);
+  }
+  
+  public static class DefaultClassBasedClassifier<T extends ITestNGMethod> implements Classifier<T> {
+    Map<Class<?>, Map<T, Node<T>>> m_storage= new HashMap<Class<?>, Map<T, Node<T>>>();
+    
+    @Override
+    public Collection<Node<T>> getSameClassNodes(T itm) {
+      Object[] instances= itm.getInstances();
+      List<Node<T>> result= new ArrayList<Node<T>>();
+      if(null != instances) {
+        for(Object i : instances) {
+          result.addAll(getSameClassNodes(i.getClass()));
+        }
+      }
+      else {
+        result.addAll(getSameClassNodes(itm.getRealClass()));
+      }
+      return result;
+    }
+
+    private Collection<Node<T>> getSameClassNodes(Class<?> cls) {
+      Map<T, Node<T>> res= m_storage.get(cls);
+      if(null != res) {
+        return res.values();
+      }
+      
+      return Collections.emptyList();
+    }
+      
+    @Override
+    public void store(Node<T> nitm) {
+      Object[] instances= nitm.getObject().getInstances();
+      if(null != instances) {
+        for(Object i : instances) {
+          store(nitm, i.getClass());
+        }
+      }
+      else {
+        store(nitm, nitm.getObject().getRealClass());
+      }
+    }
+
+    private void store(Node<T> nitm, Class<?> cls) {
+      Map<T, Node<T>> result= m_storage.get(cls);
+      if(null == result) {
+        result= new HashMap<T, Node<T>>();
+        m_storage.put(cls, result);
+      }
+      result.put(nitm.getObject(), nitm);  
+    }
+    
+    @Override
+    public void remove(Node<T> n) {
+      Object[] instances= n.getObject().getInstances();
+      if(null != instances) {
+        for(Object i : instances) {
+          remove(i.getClass(), n);
+        }
+      }
+      else {
+        remove(n.getObject().getRealClass(), n);
+      }
+    }
+    
+    private void remove(Class<?> cls, Node<T> n) {
+      Map<T, Node<T>> res= m_storage.get(cls);
+      res.remove(n.getObject());
+      
+    }
+  }
 }
