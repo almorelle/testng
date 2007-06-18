@@ -2,7 +2,6 @@ package org.testng.internal;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,16 +20,6 @@ public class Graph<T extends Object> {
   private static boolean m_verbose = false;
   private Map<T, Node<T>> m_nodes = new HashMap<T, Node<T>>();
   private List<T> m_strictlySortedNodes = null;
-  private Classifier<T> m_classifier;
-  private boolean m_useClassifier= false;
-  
-  public Graph() {
-  }
-  
-  public Graph(Classifier<T> classifier) {
-    m_classifier= classifier;
-    m_useClassifier= true;
-  }
   
   //  A map of nodes that are not the predecessors of any node
   // (not needed for the algorithm but convenient to calculate
@@ -108,9 +97,6 @@ public class Graph<T extends Object> {
         ppp("ADDING FOR SORT: " + n.getObject());
         Node<T> clone= n.clone();
         nodes2.add(clone);
-        if(m_useClassifier) {
-          m_classifier.store(clone);
-        }
       }
       else {
         ppp("SKIPPING INDEPENDENT NODE " + n);
@@ -166,9 +152,6 @@ public class Graph<T extends Object> {
    */
   private void removeFromNodes(List<Node<T>> nodes, Node<T> node) {
     nodes.remove(node);
-    if(m_useClassifier) {
-      m_classifier.remove(node);
-    }
     for (Node<T> n : nodes) {
       n.removePredecessor(node.getObject());
     }
@@ -180,24 +163,13 @@ public class Graph<T extends Object> {
     }
   }
   
-  private Node<T> findNodeWithNoPredecessors(List<Node<T>> nodes, Node<T> classNode) {
-    if(null != classNode && m_useClassifier) {
-      Collection<Node<T>> sameClassNodes= m_classifier.getSameClassNodes(classNode.getObject());
-      ppp("  SAME CLASS: " + sameClassNodes);
-      for(Node<T> n : sameClassNodes) {
-        if(! n.hasPredecessors()) {
-          ppp(" RETURN FROM SAME CLASS: " + n);
-          return n;
-        }
-      }
-    }
-    for (Node<T> n : nodes) {
-      if (! n.hasPredecessors()) {
-        ppp(" RETURN NO CLASS: " + n);
+  protected Node<T> findNodeWithNoPredecessors(List<Node<T>> nodes, Node<T> lastNode) {
+    for(Node<T> n : nodes) {
+      if(!n.hasPredecessors()) {
         return n;
       }
     }
-    
+
     return null;
   }
   
@@ -402,56 +374,36 @@ public class Graph<T extends Object> {
     ppp("TESTS PASSED");
   }
   
-  public static interface Classifier<T extends Object> {
-    void store(Node<T> n);
+}
 
-    Collection<Node<T>> getSameClassNodes(T n);
+class TestNGMethodDependencyGraph extends Graph<ITestNGMethod> {
+  @Override
+  protected Node<ITestNGMethod> findNodeWithNoPredecessors(
+      List<Node<ITestNGMethod>> nodes,
+      Node<ITestNGMethod> lastNode) {
     
-    void remove(Node<T> n);
+    Class<?> lastProcessedClass= lastNode != null ? lastNode.getObject().getRealClass() : null;
+    Node<ITestNGMethod> returnNode= null;
+    for(Node<ITestNGMethod> n : nodes) {
+      if(!n.hasPredecessors()) {
+        Class<?> cls= n.getObject().getRealClass();
+        if(null == lastProcessedClass) {
+          return n;
+        }
+        else if(lastProcessedClass.equals(cls)) {
+          return n;
+        }
+        else if(lastProcessedClass.isAssignableFrom(cls) || cls.isAssignableFrom(lastProcessedClass)){
+          returnNode= n;
+        }
+        else {
+          returnNode= n;
+        }
+      }
+    }
+    
+    return returnNode;
   }
   
-  public static class DefaultClassBasedClassifier<T extends ITestNGMethod> implements Classifier<T> {
-    Map<Class<?>, Map<T, Node<T>>> m_storage= new HashMap<Class<?>, Map<T, Node<T>>>();
-    
-    @Override
-    public Collection<Node<T>> getSameClassNodes(T itm) {
-      List<Node<T>> result= new ArrayList<Node<T>>();
-        result.addAll(getSameClassNodes(itm.getRealClass()));
-      return result;
-    }
-
-    private Collection<Node<T>> getSameClassNodes(Class<?> cls) {
-      Map<T, Node<T>> res= m_storage.get(cls);
-      if(null != res) {
-        return res.values();
-      }
-      
-      return Collections.emptyList();
-    }
-      
-    @Override
-    public void store(Node<T> nitm) {
-        store(nitm, nitm.getObject().getRealClass());
-    }
-
-    private void store(Node<T> nitm, Class<?> cls) {
-      Map<T, Node<T>> result= m_storage.get(cls);
-      if(null == result) {
-        result= new HashMap<T, Node<T>>();
-        m_storage.put(cls, result);
-      }
-      result.put(nitm.getObject(), nitm);  
-    }
-    
-    @Override
-    public void remove(Node<T> n) {
-        remove(n.getObject().getRealClass(), n);
-    }
-    
-    private void remove(Class<?> cls, Node<T> n) {
-      Map<T, Node<T>> res= m_storage.get(cls);
-      res.remove(n.getObject());
-      
-    }
-  }
 }
+

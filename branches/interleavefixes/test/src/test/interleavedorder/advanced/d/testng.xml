@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="Ordering"   verbose="1" >
+  <test name="Sequential + Dependency">
+    <classes>
+      <class name="test.interleavedorder.advanced.d.Daughter" />
+      <class name="test.interleavedorder.advanced.d.Son" />
+    </classes>
+  </test>
+</suite>
