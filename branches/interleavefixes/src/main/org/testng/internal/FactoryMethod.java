@@ -29,13 +29,14 @@ public class FactoryMethod extends BaseTestMethod {
    * @param testClass
    * @param method
    */
-  public FactoryMethod(Method method, 
+  public FactoryMethod(Class<?> realClass,
+                       Method method, 
                        Object instance,
                        XmlTest xmlTest, 
                        IAnnotationFinder annotationFinder,
                        ITestContext testContext) 
   {
-    super(method, annotationFinder);
+    super(realClass, method, annotationFinder);
     if (! instance.getClass().isAssignableFrom(method.getDeclaringClass())) {
       throw new TestNGException("Mismatch between instance/method classes:"
           + instance.getClass() + " " + method.getDeclaringClass());

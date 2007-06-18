@@ -1,5 +1,7 @@
 package org.testng.internal.annotations;
 
+import org.testng.IRetryAnalyzer;
+
 /**
  * Encapsulate the &#64;Test / &#64;testng.test annotation.
  * 
@@ -44,8 +46,8 @@ public interface ITest extends ITestOrConfiguration {
   public boolean getAlwaysRun();
   public void setAlwaysRun(boolean f);
 
-  public Class[] getExpectedExceptions();
-  public void setExpectedExceptions(Class[] e);
+  public Class<?>[] getExpectedExceptions();
+  public void setExpectedExceptions(Class<?>[] e);
   
   public String getSuiteName();
   public void setSuiteName(String s);
@@ -57,5 +59,8 @@ public interface ITest extends ITestOrConfiguration {
   public void setSequential(boolean f);
   
   public String getDataProvider();
-  public Class getDataProviderClass();
+  public Class<?> getDataProviderClass();
+  
+  public IRetryAnalyzer getRetryAnalyzer();
+  public void setRetryAnalyzer(Class<?> c);
 }

@@ -3,7 +3,6 @@ package org.testng;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -28,7 +27,6 @@ import org.testng.internal.ResultMap;
 import org.testng.internal.RunInfo;
 import org.testng.internal.TestMethodWorker;
 import org.testng.internal.TestNGClassFinder;
-import org.testng.internal.TestNGMethod;
 import org.testng.internal.TestNGMethodFinder;
 import org.testng.internal.Utils;
 import org.testng.internal.XmlMethodSelector;
@@ -52,7 +50,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   private ISuite m_suite;
   protected XmlTest m_xmlTest;
   private String m_testName;
-  private boolean m_debug = false;
 
   transient private List<XmlClass> m_testClassesFromXml= null;
   transient private List<XmlPackage> m_packageNamesFromXml= null;
@@ -79,7 +76,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   private Date m_endDate = null;
 
   /** A map to keep track of Class <-> IClass. */
-  transient private Map<Class, ITestClass> m_classMap= new HashMap<Class, ITestClass>();
+  transient private Map<Class<?>, ITestClass> m_classMap= new HashMap<Class<?>, ITestClass>();
 
   /** Where the reports will be created. */
   private String m_outputDirectory= Constants.getDefaultValueFor(Constants.PROP_OUTPUT_DIR);
@@ -96,8 +93,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   // only a subset of them are run:  those that are enabled and belong on the same class as
   // (or a parent of) the test class.
   //
-  private ITestNGMethod[] m_beforeClassMethods = {};
-  private ITestNGMethod[] m_afterClassMethods = {};
   /** */
   private ITestNGMethod[] m_beforeSuiteMethods = {};
   private ITestNGMethod[] m_afterSuiteMethods = {};
@@ -268,7 +263,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
                                              m_annotationFinder,
                                              this);
     ITestMethodFinder testMethodFinder
-      = new TestNGMethodFinder(m_runInfo, m_annotationFinder);
+      = new TestNGMethodFinder<ITestNGMethod>(m_runInfo, m_annotationFinder);
     
     m_runInfo.setTestMethods(testMethods);
     
@@ -317,59 +312,36 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     //
     // Sort the methods
     //
-    m_beforeSuiteMethods = MethodHelper.collectAndOrderMethods(beforeSuiteMethods,
-                                                              false,
+    m_beforeSuiteMethods = MethodHelper.collectAndOrderConfigurationMethods(beforeSuiteMethods,
                                                               m_runInfo,
                                                               m_annotationFinder,
                                                               true /* unique */,
                                                               m_excludedMethods);
 
-    m_beforeXmlTestMethods = MethodHelper.collectAndOrderMethods(beforeXmlTestMethods,
-                                                                false,
+    m_beforeXmlTestMethods = MethodHelper.collectAndOrderConfigurationMethods(beforeXmlTestMethods,
                                                                 m_runInfo,
                                                                 m_annotationFinder,
                                                                 true, // CQ added by me
                                                                 m_excludedMethods);
 
-    m_beforeClassMethods = MethodHelper.collectAndOrderMethods(beforeClassMethods,
-                                                              false,
-                                                              m_runInfo,
-                                                              m_annotationFinder,
-                                                              m_excludedMethods);
-
     m_allTestMethods = MethodHelper.collectAndOrderMethods(testMethods,
-                                                          true,
                                                           m_runInfo,
                                                           m_annotationFinder,
                                                           m_excludedMethods);
 
-    m_afterClassMethods = MethodHelper.collectAndOrderMethods(afterClassMethods,
-                                                             false,
-                                                             m_runInfo,
-                                                             m_annotationFinder,
-                                                             m_excludedMethods);
-
-    m_afterXmlTestMethods = MethodHelper.collectAndOrderMethods(afterXmlTestMethods,
-                                                               false,
+    m_afterXmlTestMethods = MethodHelper.collectAndOrderConfigurationMethods(afterXmlTestMethods,
                                                                m_runInfo,
                                                                m_annotationFinder,
                                                                true, // CQ added by me
                                                                m_excludedMethods);
 
-    m_afterSuiteMethods = MethodHelper.collectAndOrderMethods(afterSuiteMethods,
-                                                             false,
+    m_afterSuiteMethods = MethodHelper.collectAndOrderConfigurationMethods(afterSuiteMethods,
                                                              m_runInfo,
                                                              m_annotationFinder,
                                                              true /* unique */,
                                                              m_excludedMethods);
     // shared group methods
     m_groupMethods = new ConfigurationGroupMethods(m_allTestMethods, beforeGroupMethods, afterGroupMethods);
-  }
-
-  private static void ppp(String s) {
-    if (true) {
-      System.out.println("[TestRunner] " + s);
-    }
   }
 
   private void fixMethodsWithClass(ITestNGMethod[] methods,
@@ -386,19 +358,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
 
   public Collection<ITestClass> getIClass() {
     return m_classMap.values();
-  }
-
-  /**
-   * FIXME: not used
-   */
-  private IClass findIClass(IClass[] classes, Class cls) {
-    for (IClass c : classes) {
-      if (c.getRealClass().equals(cls)) {
-        return c;
-      }
-    }
-
-    return null;
   }
 
   public void setTestName(String name) {
@@ -525,7 +484,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   }
 
   private void privateRunJUnit(XmlTest xmlTest) {
-    final Class[] classes= Utils.xmlClassesToClasses(m_testClassesFromXml);
+    final Class<?>[] classes= Utils.xmlClassesToClasses(m_testClassesFromXml);
     final List<ITestNGMethod> runMethods= new ArrayList<ITestNGMethod>();
     List<IMethodWorker> workers= new ArrayList<IMethodWorker>();
     // FIXME: directly referincing JUnitTestRunner which uses JUnit classes
@@ -548,7 +507,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
        * @see java.lang.Runnable#run()
        */
       public void run() {    
-        for(Class tc: classes) {
+        for(Class<?> tc: classes) {
           IJUnitTestRunner tr= ClassHelper.createTestRunner(TestRunner.this);
           try {
             tr.run(tc);
@@ -568,8 +527,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
   }
   
   public void privateRun(XmlTest xmlTest) {
-//    Map<String, String> params = xmlTest.getParameters();
-
     //
     // Calculate the lists of tests that can be run in sequence and in parallel
     //
@@ -577,7 +534,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     List<ITestNGMethod> parallelList= new ArrayList<ITestNGMethod>();
 
     computeTestLists(sequentialList, parallelList);
-    
     
     log(3, "Found " + (sequentialList.size() + parallelList.size()) + " applicable methods");
     
@@ -589,7 +545,6 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     ClassMethodMap cmm = new ClassMethodMap(m_allTestMethods);
     
     createSequentialWorkers(sequentialList, xmlTest.getParameters(), cmm, workers);
-
 
     // All the parallel tests are placed in a separate worker, so they can be
     // invoked in parallel
@@ -622,6 +577,10 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
       log(3, "WILL BE RUN IN RANDOM ORDER:");
       for (MethodInstance mi : methodInstances) {
         log(3, "  " + mi.getMethod());
+        log(3, "      on instances");
+        for(Object o: mi.getInstances()) {
+          log(3, "     " + o);
+        }
       }
       log(3, "===");
     }
@@ -786,7 +745,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
       // If the class this method belongs to has @Test(sequential = true), we
       // put this method in the sequential list right away
       //
-      Class<?> cls = tm.getMethod().getDeclaringClass();
+      Class<?> cls= tm.getRealClass();
       org.testng.internal.annotations.ITest test = 
         (org.testng.internal.annotations.ITest) m_annotationFinder.
           findAnnotation(cls, org.testng.internal.annotations.ITest.class);
@@ -811,8 +770,8 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
       String[] currentGroupsDependedUpon= tm.getGroupsDependedUpon();
       String[] currentMethodsDependedUpon= tm.getMethodsDependedUpon();
 
-      String thisMethodName = tm.getMethod().getDeclaringClass().getName() + "." + 
-        tm.getMethod().getName();
+      String thisMethodName = tm.getMethod().getDeclaringClass().getName() 
+        + "." + tm.getMethod().getName();
       if (currentGroupsDependedUpon.length > 0) {
         for (String gdu : currentGroupsDependedUpon) {
           groupsDependedUpon.put(gdu, gdu);
@@ -1057,7 +1016,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier {
     }
   }
 
-  private String mapToString(Map m) {
+  private String mapToString(Map<?, ?> m) {
     StringBuffer result= new StringBuffer();
     for (Object o : m.values()) {
       result.append(o.toString()).append(" ");

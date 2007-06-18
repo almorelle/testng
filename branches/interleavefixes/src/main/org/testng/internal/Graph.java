@@ -415,16 +415,8 @@ public class Graph<T extends Object> {
     
     @Override
     public Collection<Node<T>> getSameClassNodes(T itm) {
-      Object[] instances= itm.getInstances();
       List<Node<T>> result= new ArrayList<Node<T>>();
-      if(null != instances) {
-        for(Object i : instances) {
-          result.addAll(getSameClassNodes(i.getClass()));
-        }
-      }
-      else {
         result.addAll(getSameClassNodes(itm.getRealClass()));
-      }
       return result;
     }
 
@@ -439,15 +431,7 @@ public class Graph<T extends Object> {
       
     @Override
     public void store(Node<T> nitm) {
-      Object[] instances= nitm.getObject().getInstances();
-      if(null != instances) {
-        for(Object i : instances) {
-          store(nitm, i.getClass());
-        }
-      }
-      else {
         store(nitm, nitm.getObject().getRealClass());
-      }
     }
 
     private void store(Node<T> nitm, Class<?> cls) {
@@ -461,15 +445,7 @@ public class Graph<T extends Object> {
     
     @Override
     public void remove(Node<T> n) {
-      Object[] instances= n.getObject().getInstances();
-      if(null != instances) {
-        for(Object i : instances) {
-          remove(i.getClass(), n);
-        }
-      }
-      else {
         remove(n.getObject().getRealClass(), n);
-      }
     }
     
     private void remove(Class<?> cls, Node<T> n) {

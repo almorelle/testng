@@ -223,7 +223,7 @@ public class AnnotationHelper {
               
               String key = createMethodKey(m);
               if (null == vResult.get(key)) {
-                ITestNGMethod tm = new TestNGMethod(/* m.getDeclaringClass(), */ m, annotationFinder);
+                ITestNGMethod tm = new TestNGMethod(rootClass, m, annotationFinder);
                 vResult.put(key,tm);
               }
             }

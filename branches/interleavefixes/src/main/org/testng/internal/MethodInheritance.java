@@ -1,6 +1,5 @@
 package org.testng.internal;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,10 +15,10 @@ public class MethodInheritance {
    * @param methodClass
    * @return
    */
-  private static List<ITestNGMethod> findMethodListSuperClass(Map<Class, List<ITestNGMethod>> map, 
+  private static List<ITestNGMethod> findMethodListSuperClass(Map<Class<?>, List<ITestNGMethod>> map, 
       Class< ? extends ITestNGMethod> methodClass)
   {
-    for (Class cls : map.keySet()) {
+    for (Class<?> cls : map.keySet()) {
       if (cls.isAssignableFrom(methodClass)) {
         return map.get(cls);
       }
@@ -34,10 +33,10 @@ public class MethodInheritance {
    * @param methodClass
    * @return
    */
-  private static Class findSubClass(Map<Class, List<ITestNGMethod>> map, 
+  private static Class<?> findSubClass(Map<Class<?>, List<ITestNGMethod>> map, 
       Class< ? extends ITestNGMethod> methodClass)
   {
-    for (Class cls : map.keySet()) {
+    for (Class<?> cls : map.keySet()) {
       if (methodClass.isAssignableFrom(cls)) {
         return cls; 
       }
@@ -55,9 +54,6 @@ public class MethodInheritance {
    * @param baseClassToChild
    */
   public static void fixMethodInheritance(ITestNGMethod[] methods, boolean baseClassToChild) {
-    // Map of classes -> List of methods that belong to this class or same hierarchy
-    Map<Class, List<ITestNGMethod>> map = new HashMap<Class, List<ITestNGMethod>>();
-    
     //
     // First, make sure that none of these methods define a dependencey of its own
     //
@@ -68,18 +64,22 @@ public class MethodInheritance {
         return;
       }
     }
+
+    // Map of classes -> List of methods that belong to this class or same hierarchy
+    Map<Class<?>, List<ITestNGMethod>> map = new HashMap<Class<?>, List<ITestNGMethod>>();
     
     //
     // Put the list of methods in their hierarchy buckets
     //
     for (ITestNGMethod method : methods) {
+      @SuppressWarnings("all")
       Class< ? extends ITestNGMethod> methodClass = method.getRealClass();
       List<ITestNGMethod> l = findMethodListSuperClass(map, methodClass);
       if (null != l) {
         l.add(method);
       }
       else {
-        Class subClass = findSubClass(map, methodClass);
+        Class<?> subClass = findSubClass(map, methodClass);
         if (null != subClass) {
           l = map.get(subClass);
           l.add(method);
@@ -129,8 +129,8 @@ public class MethodInheritance {
   
   private static boolean equalsEffectiveClass(ITestNGMethod m1, ITestNGMethod m2) {
     try {
-      Class c1 = m1.getRealClass();
-      Class c2 = m2.getRealClass();
+      Class<?> c1 = m1.getRealClass();
+      Class<?> c2 = m2.getRealClass();
       
       boolean isEqual = c1 == null ? c2 == null : c1.equals(c2);
       

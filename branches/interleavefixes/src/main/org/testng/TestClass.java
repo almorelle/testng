@@ -168,7 +168,7 @@ public class TestClass extends NoOpTestClass implements ITestClass {
       Method m = tm.getMethod();
       if (m.getDeclaringClass().isAssignableFrom(m_testClass)) {
         log(4, "Adding method " + tm + " on TestClass " + m_testClass);
-        vResult.add(new TestNGMethod(/* tm.getRealClass(), */ m, m_annotationFinder));
+        vResult.add(new TestNGMethod(m_testClass,  m, m_annotationFinder));
       }
       else {
         log(4, "Rejecting method " + tm + " for TestClass " + m_testClass);

@@ -3,6 +3,7 @@ package org.testng.internal;
 import java.lang.reflect.Method;
 import java.util.Comparator;
 
+import org.testng.IRetryAnalyzer;
 import org.testng.ITestClass;
 import org.testng.ITestNGMethod;
 import org.testng.internal.annotations.AnnotationHelper;
@@ -28,12 +29,12 @@ public class TestNGMethod extends BaseTestMethod {
    * @param method
    * @param finder
    */
-  public TestNGMethod(Method method, IAnnotationFinder finder) {
-    this(method, finder, true);
+  public TestNGMethod(Class<?> actualClass, Method method, IAnnotationFinder finder) {
+    this(actualClass, method, finder, true);
   }
 
-  private TestNGMethod(Method method, IAnnotationFinder finder, boolean initialize) {
-    super(method, finder);
+  private TestNGMethod(Class<?> actualClass, Method method, IAnnotationFinder finder, boolean initialize) {
+    super(actualClass, method, finder);
 
     if(initialize) {
       init();
@@ -87,24 +88,18 @@ public class TestNGMethod extends BaseTestMethod {
 
       if (null != testAnnotation) {
         m_timeOut = testAnnotation.getTimeOut();
-      }
-
-      if (null != testAnnotation) {
         m_successPercentage = testAnnotation.getSuccessPercentage();
 
         setInvocationCount(testAnnotation.getInvocationCount());
         setThreadPoolSize(testAnnotation.getThreadPoolSize());
+        setAlwaysRun(testAnnotation.getAlwaysRun());
+        setDescription(testAnnotation.getDescription());
+        setRetryAnalyzer(testAnnotation.getRetryAnalyzer());
       }
 
       // Groups
       {
         initGroups(ITest.class);
-      }
-
-      // Other annotations
-      if (null != testAnnotation) {
-        setAlwaysRun(testAnnotation.getAlwaysRun());
-        setDescription(testAnnotation.getDescription());
       }
     }
   }
@@ -135,7 +130,7 @@ public class TestNGMethod extends BaseTestMethod {
    * @see org.testng.internal.BaseTestMethod#clone()
    */
   public TestNGMethod clone() {
-    TestNGMethod clone= new TestNGMethod(getMethod(), getAnnotationFinder(), false);
+    TestNGMethod clone= new TestNGMethod(getRealClass(), getMethod(), getAnnotationFinder(), false);
     ITestClass tc= getTestClass();
     NoOpTestClass testClass= new NoOpTestClass(tc);
     testClass.setBeforeTestMethods(clone(tc.getBeforeTestMethods()));
@@ -156,6 +151,7 @@ public class TestNGMethod extends BaseTestMethod {
     clone.setInvocationCount(getInvocationCount());
     clone.m_successPercentage = getSuccessPercentage();
     clone.m_timeOut = getTimeOut();
+    clone.setRetryAnalyzer(getRetryAnalyzer());
 
     return clone;
   }

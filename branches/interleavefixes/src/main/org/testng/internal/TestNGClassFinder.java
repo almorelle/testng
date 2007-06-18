@@ -26,10 +26,10 @@ import org.testng.xml.XmlTest;
  */
 public class TestNGClassFinder extends BaseClassFinder {
   private ITestContext m_testContext = null;
-  private Map<Class, List<Object>> m_instanceMap= new HashMap<Class, List<Object>>();
+  private Map<Class<?>, List<Object>> m_instanceMap= new HashMap<Class<?>, List<Object>>();
 
-  public TestNGClassFinder(Class[] classes,
-                           Map<Class, List<Object>> instanceMap,
+  public TestNGClassFinder(Class<?>[] classes,
+                           Map<Class<?>, List<Object>> instanceMap,
                            XmlTest xmlTest,
                            IAnnotationFinder annotationFinder,
                            ITestContext testContext) 
@@ -37,20 +37,20 @@ public class TestNGClassFinder extends BaseClassFinder {
     m_testContext = testContext;
     
     if(null == instanceMap) {
-      instanceMap= new HashMap<Class, List<Object>>();
+      instanceMap= new HashMap<Class<?>, List<Object>>();
     }
 
     //
     // Find all the new classes and their corresponding instances
     //
-    Class[] allClasses= classes;
+    Class<?>[] allClasses= classes;
 
     IObjectFactory objectFactory = testContext.getSuite().getObjectFactory();
     //very first pass is to find ObjectFactory, can't create anything else until then
     if(objectFactory == null) {
       objectFactory = new ObjectFactoryImpl();
       outer:
-      for(Class cls : allClasses) {
+      for(Class<?> cls : allClasses) {
         for(Method m : cls.getMethods()) {
           IAnnotation a = annotationFinder.findAnnotation(m, org.testng.internal.annotations.IObjectFactory.class);
           if(null != a) {
@@ -75,11 +75,11 @@ public class TestNGClassFinder extends BaseClassFinder {
       }
     }
     
-    for(Class cls : allClasses) {
+    for(Class<?> cls : allClasses) {
       if((null == cls)) {
         ppp("FOUND NULL CLASS IN FOLLOWING ARRAY:");
         int i= 0;
-        for(Class c : allClasses) {
+        for(Class<?> c : allClasses) {
           ppp("  " + i + ": " + c);
         }
         
@@ -87,7 +87,7 @@ public class TestNGClassFinder extends BaseClassFinder {
       }
 
       if(isTestNGClass(cls, annotationFinder)) {
-        List allInstances= instanceMap.get(cls);
+        List<Object> allInstances= instanceMap.get(cls);
         Object thisInstance= (null != allInstances) ? allInstances.get(0) : null;
         
         // If annotation class and instances are abstract, skip them
@@ -108,13 +108,13 @@ public class TestNGClassFinder extends BaseClassFinder {
 
           Method factoryMethod= ClassHelper.findFactoryMethod(cls, annotationFinder);
           if(null != factoryMethod) {
-            FactoryMethod fm= new FactoryMethod( /* cls, */
+            FactoryMethod fm= new FactoryMethod( cls,
               factoryMethod,
               instance,
               xmlTest,
               annotationFinder,
               m_testContext);
-            List<Class> moreClasses= new ArrayList<Class>();
+            List<Class<?>> moreClasses= new ArrayList<Class<?>>();
 
             {
 //            ppp("INVOKING FACTORY " + fm + " " + this.hashCode());
@@ -125,7 +125,7 @@ public class TestNGClassFinder extends BaseClassFinder {
               // otherwise, just call getClass() on the returned instances
               //
               if (instances.length > 0) {
-                Class elementClass = instances[0].getClass();
+                Class<?> elementClass = instances[0].getClass();
                 if(IInstanceInfo.class.isAssignableFrom(elementClass)) {
                   for(Object o : instances) {
                     IInstanceInfo ii = (IInstanceInfo) o;
@@ -169,7 +169,7 @@ public class TestNGClassFinder extends BaseClassFinder {
     //
     // Add all the instances we found to their respective IClasses
     //
-    for(Class c : m_instanceMap.keySet()) {
+    for(Class<?> c : m_instanceMap.keySet()) {
       List<Object> instances= m_instanceMap.get(c);
       for(Object instance : instances) {
         IClass ic= getIClass(c);
@@ -187,10 +187,10 @@ public class TestNGClassFinder extends BaseClassFinder {
    * @param annotationFinder The instance of annotation finder being used
    * @return True if class has any testng annotations
    */
-  public static boolean isTestNGClass(Class cls, IAnnotationFinder annotationFinder) {
-	  Class[] allAnnotations= AnnotationHelper.getAllAnnotations();
+  public static boolean isTestNGClass(Class<?> cls, IAnnotationFinder annotationFinder) {
+	  Class<?>[] allAnnotations= AnnotationHelper.getAllAnnotations();
 	  
-	    for(Class annotation : allAnnotations) {
+	    for(Class<?> annotation : allAnnotations) {
           // Try on the methods
           for(Method m : cls.getMethods()) {
             IAnnotation ma= annotationFinder.findAnnotation(m, annotation);
@@ -206,7 +206,7 @@ public class TestNGClassFinder extends BaseClassFinder {
 	      }
 
 	      // Try on the constructors
-	      for(Constructor ctor : cls.getConstructors()) {
+	      for(Constructor<?> ctor : cls.getConstructors()) {
 	        IAnnotation ca= annotationFinder.findAnnotation(ctor, annotation);
 	        if(null != ca) {
 	          return true;
@@ -217,7 +217,7 @@ public class TestNGClassFinder extends BaseClassFinder {
 	    return false;
   }
   
-  private void addInstance(Class clazz, Object o) {
+  private void addInstance(Class<?> clazz, Object o) {
     List<Object> list= m_instanceMap.get(clazz);
 
     if(null == list) {

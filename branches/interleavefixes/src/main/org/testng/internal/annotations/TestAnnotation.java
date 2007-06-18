@@ -1,7 +1,6 @@
 package org.testng.internal.annotations;
 
-import org.testng.ITestResult;
-import org.testng.TestNG;
+import org.testng.IRetryAnalyzer;
 
 
 /**
@@ -17,24 +16,24 @@ public class TestAnnotation extends TestOrConfiguration implements ITest {
   private int m_successPercentage = 100;
   private String m_dataProvider = "";
   private boolean m_alwaysRun = false;
-  private Class[] m_expectedExceptions = {};
+  private Class<?>[] m_expectedExceptions = {};
   private String m_suiteName = "";
   private String m_testName = "";
   private boolean m_sequential = false;
-  private boolean m_reentering = false;
-  private Class m_dataProviderClass = null;
+  private Class<?> m_dataProviderClass = null;
+  private IRetryAnalyzer m_retryAnalyzer = null;
   
   /**
    * @return the expectedExceptions
    */
-  public Class[] getExpectedExceptions() {
+  public Class<?>[] getExpectedExceptions() {
     return m_expectedExceptions;
   }
 
   /**
    * @param expectedExceptions the expectedExceptions to set
    */
-  public void setExpectedExceptions(Class[] expectedExceptions) {
+  public void setExpectedExceptions(Class<?>[] expectedExceptions) {
     m_expectedExceptions = expectedExceptions;
   }
 
@@ -46,11 +45,11 @@ public class TestAnnotation extends TestOrConfiguration implements ITest {
     m_dataProvider = dataProvider;
   }
 
-  public Class getDataProviderClass() {
+  public Class<?> getDataProviderClass() {
     return m_dataProviderClass;
   }
 
-  public void setDataProviderClass(Class dataProviderClass) {
+  public void setDataProviderClass(Class<?> dataProviderClass) {
     m_dataProviderClass = dataProviderClass;
   }
 
@@ -117,5 +116,25 @@ public class TestAnnotation extends TestOrConfiguration implements ITest {
   public void setSequential(boolean sequential) {
     m_sequential = sequential;
   }
-  
+
+  public IRetryAnalyzer getRetryAnalyzer() {
+    return m_retryAnalyzer;
+  }
+
+  public void setRetryAnalyzer(Class<?> c) {
+    m_retryAnalyzer = null;
+
+    if (c != null && IRetryAnalyzer.class.isAssignableFrom(c)) {
+      try {
+        m_retryAnalyzer = (IRetryAnalyzer) c.newInstance();
+      } 
+      catch (InstantiationException e) {
+        // The class will never be called.
+      } 
+      catch (IllegalAccessException e) {
+        // The class will never be called.
+      }
+    }
+  }
+
 }

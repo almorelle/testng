@@ -29,7 +29,29 @@ public class MethodInstance {
     @Override
     @SuppressWarnings("all")
     public int compare(MethodInstance o1, MethodInstance o2) {
-      return o1.getMethod().getTestClass().getName().compareTo(o2.getMethod().getTestClass().getName());
+//      return o1.getMethod().getTestClass().getName().compareTo(o2.getMethod().getTestClass().getName());
+      int result= o1.getMethod().getTestClass().getName().compareTo(o2.getMethod().getTestClass().getName());
+      if(result == 0) {
+        Object[] i1= o1.getInstances();
+        Object[] i2= o2.getInstances();
+        if(i1.length == i2.length) {
+          for(int i= 0; i < i1.length; i++) {
+            int h1= i1[i].hashCode();
+            int h2= i2[i].hashCode();
+            if(h1 != h2) {
+              return h1 > h2 ? 1 : -1;
+            }
+          }
+          
+          return 0;
+        }
+        else {
+          return i1.length > i2.length ? 1 : -1;
+        }
+      }
+      else {
+        return result;
+      }
     }
   };
 

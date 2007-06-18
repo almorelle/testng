@@ -27,10 +27,13 @@ public class TestResult implements ITestResult {
   private Object[] m_parameters = {};
 
   /**
+   * 
    * @param testClass
-   * @param testMethod
-   * @param status
+   * @param instance
+   * @param method
    * @param throwable
+   * @param start
+   * @param end
    */
   public TestResult(IClass testClass,
                     Object instance,
@@ -174,4 +177,5 @@ public class TestResult implements ITestResult {
   public void setParameters(Object[] parameters) {
     m_parameters = parameters;
   }
+ 
 }

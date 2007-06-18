@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.testng.IRetryAnalyzer;
 import org.testng.ITestNGMethod;
 import org.testng.internal.annotations.AnnotationHelper;
 import org.testng.internal.annotations.IAfterClass;
@@ -36,7 +37,8 @@ public class ConfigurationMethod extends BaseTestMethod {
   
   private boolean m_inheritGroupsFromTestClass = false;
 
-  private ConfigurationMethod(Method method, 
+  private ConfigurationMethod(Class<?> actualClass,
+                              Method method, 
                               IAnnotationFinder annotationFinder,
                               boolean isBeforeSuite,
                               boolean isAfterSuite,
@@ -49,7 +51,7 @@ public class ConfigurationMethod extends BaseTestMethod {
                               String[] beforeGroups,
                               String[] afterGroups,
                               boolean initialize) {
-    super(method, annotationFinder);
+    super(actualClass, method, annotationFinder);
     if(initialize) {
       init();
     }
@@ -83,7 +85,7 @@ public class ConfigurationMethod extends BaseTestMethod {
                              String[] beforeGroups,
                              String[] afterGroups) 
   {
-    this(method, annotationFinder, isBeforeSuite, isAfterSuite, isBeforeTest, isAfterTest,
+    this(method.getDeclaringClass(), method, annotationFinder, isBeforeSuite, isAfterSuite, isBeforeTest, isAfterTest,
         isBeforeClass, isAfterClass, isBeforeMethod, isAfterMethod, beforeGroups, afterGroups, true);
   }
 
@@ -343,7 +345,8 @@ public class ConfigurationMethod extends BaseTestMethod {
   }
 
   public ConfigurationMethod clone() {
-    ConfigurationMethod clone= new ConfigurationMethod(getMethod(),
+    ConfigurationMethod clone= new ConfigurationMethod(getRealClass(),
+        getMethod(),
         getAnnotationFinder(),
         isBeforeSuiteConfiguration(),
         isAfterSuiteConfiguration(),
@@ -370,5 +373,6 @@ public class ConfigurationMethod extends BaseTestMethod {
 
     return clone;
   }
+  
 }
 
