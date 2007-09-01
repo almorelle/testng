@@ -55,7 +55,7 @@ public class MethodInheritance {
    */
   public static void fixMethodInheritance(ITestNGMethod[] methods, boolean baseClassToChild) {
     //
-    // First, make sure that none of these methods define a dependencey of its own
+    // First, make sure that none of these methods define a dependency of its own
     //
     for (ITestNGMethod m : methods) {
       String[] mdu = m.getMethodsDependedUpon();
@@ -101,27 +101,19 @@ public class MethodInheritance {
       if (l.size() > 1) {
         // Sort them
         sortMethodsByInheritance(l, baseClassToChild);
-        
-        // Set methodDependedUpon accordingly
-        if (baseClassToChild) {
-          for (int i = 1; i < l.size(); i++) {
-            ITestNGMethod m1 = l.get(i - 1);
-            ITestNGMethod m2 = l.get(i);
+
+        for (int i = 0; i < l.size(); i++) {
+          ITestNGMethod m1 = l.get(i);
+          // Look for any method further down that is a subclass of this one.
+          // This handles the case when there are multiple BeforeClass/AfterClass
+          // methods in the same class.
+          for (int j = i + 1; j < l.size(); j++) {
+            ITestNGMethod m2 = l.get(j);
             if (! equalsEffectiveClass(m1, m2)) {
-              Utils.log("MethodInheritance", 4, m2 + " DEPENDS ON " + m1);
+              Utils.log ("MethodInheritance", 4, m2 + " DEPENDS ON " + m1);
               m2.addMethodDependedUpon(MethodHelper.calculateMethodCanonicalName(m1));
             }
           }
-        }
-        else {
-          for (int i = 0; i < l.size() - 1; i++) {
-            ITestNGMethod m1 = l.get(i);
-            ITestNGMethod m2 = l.get(i + 1);
-            if (! equalsEffectiveClass(m1, m2)) {
-              m2.addMethodDependedUpon(MethodHelper.calculateMethodCanonicalName(m1));
-              Utils.log("MethodInheritance", 4, m2 + " DEPENDS ON " + m1);
-            }
-          }          
         }
       }
     }

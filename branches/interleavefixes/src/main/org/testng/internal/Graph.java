@@ -32,7 +32,7 @@ public class Graph<T extends Object> {
     m_nodes.put(tm, n);
   }
 
-  public boolean isIndependent(T object) {
+  protected boolean isIndependent(T object) {
     return m_independentNodes.containsKey(object);
   }
   

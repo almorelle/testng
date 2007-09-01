@@ -1,5 +1,6 @@
 package org.testng.internal.annotations;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -19,7 +20,7 @@ import org.testng.internal.Utils;
  */
 public class AnnotationHelper {
 
-  public static ITest findTest(IAnnotationFinder finder, Class cls) {
+  public static ITest findTest(IAnnotationFinder finder, Class<?> cls) {
     return (ITest) finder.findAnnotation(cls, ITest.class);
   }
   
@@ -31,11 +32,11 @@ public class AnnotationHelper {
     return (IFactory) finder.findAnnotation(m, IFactory.class);
   }
 
-  public static ITest findTest(IAnnotationFinder finder, Constructor ctor) {
+  public static ITest findTest(IAnnotationFinder finder, Constructor<?> ctor) {
     return (ITest) finder.findAnnotation(ctor, ITest.class);
   }
 
-  public static IConfiguration findConfiguration(IAnnotationFinder finder, Constructor ctor) {
+  public static IConfiguration findConfiguration(IAnnotationFinder finder, Constructor<?> ctor) {
     IConfiguration result = (IConfiguration) finder.findAnnotation(ctor, IConfiguration.class);
     if (result == null) {
       IConfiguration bs = (IConfiguration) finder.findAnnotation(ctor, IBeforeSuite.class);
@@ -157,7 +158,7 @@ public class AnnotationHelper {
     IBeforeGroups.class, IAfterGroups.class
   };
   
-  public static Class[] CONFIGURATION_CLASSES = new Class[] {
+  public static Class<?>[] CONFIGURATION_CLASSES = new Class[] {
     IConfiguration.class,
     IBeforeSuite.class, IAfterSuite.class,   
     IBeforeTest.class, IAfterTest.class,   
@@ -166,7 +167,7 @@ public class AnnotationHelper {
     IBeforeMethod.class, IAfterMethod.class
   };
 
-  public static Class[] getAllAnnotations() {
+  public static Class<?>[] getAllAnnotations() {
     return ALL_ANNOTATIONS;
   }
 
@@ -174,7 +175,7 @@ public class AnnotationHelper {
    * Delegation method for creating the list of <CODE>ITestMethod</CODE>s to be
    * analysed.
    */
-  public static ITestNGMethod[] findMethodsWithAnnotation(Class rootClass, Class annotationClass,
+  public static ITestNGMethod[] findMethodsWithAnnotation(Class<?> rootClass, Class<?> annotationClass,
         IAnnotationFinder annotationFinder)
   {
     // Keep a map of the methods we saw so that we ignore a method in a superclass if it's
@@ -184,7 +185,7 @@ public class AnnotationHelper {
     try {
       vResult = new HashMap<String, ITestNGMethod>();
 //    Class[] classes = rootClass.getTestClasses();
-      Class cls = rootClass;
+      Class<?> cls = rootClass;
       
       //
       // If the annotation is on the class or superclass, it applies to all public methods
@@ -246,9 +247,9 @@ public class AnnotationHelper {
     }
 
   private static boolean isAnnotationPresent(IAnnotationFinder annotationFinder, 
-      Method m, Class[] annotationClasses) 
+      Method m, Class<?>[] annotationClasses) 
   {
-    for (Class a : annotationClasses) {
+    for (Class<?> a : annotationClasses) {
       if (annotationFinder.findAnnotation(m, a) != null) {
         return true;
       }
@@ -257,11 +258,11 @@ public class AnnotationHelper {
     return false;
   }
 
-  private static boolean isAnnotationPresent(IAnnotationFinder annotationFinder, Method m, Class annotationClass) {
+  private static boolean isAnnotationPresent(IAnnotationFinder annotationFinder, Method m, Class<?> annotationClass) {
     return annotationFinder.findAnnotation(m, annotationClass) != null;
   }
 
-  private static boolean isAnnotationPresent(IAnnotationFinder annotationFinder, Class cls, Class annotationClass) {
+  private static boolean isAnnotationPresent(IAnnotationFinder annotationFinder, Class<?> cls, Class<?> annotationClass) {
     return annotationFinder.findAnnotation(cls, annotationClass) != null;
   }
 
@@ -271,7 +272,7 @@ public class AnnotationHelper {
    */
   private static String createMethodKey(Method m) {
     StringBuffer result = new StringBuffer(m.getName());
-    for (Class paramClass : m.getParameterTypes()) {
+    for (Class<?> paramClass : m.getParameterTypes()) {
       result.append(' ').append(paramClass.toString());
     }
     

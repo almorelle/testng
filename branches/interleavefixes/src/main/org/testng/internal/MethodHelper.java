@@ -462,6 +462,8 @@ public class MethodHelper {
       List<ITestNGMethod> sequentialList, List<ITestNGMethod> parallelList) {
     TestNGMethodDependencyGraph result = new TestNGMethodDependencyGraph();
 
+    if (methods.length == 0) return result;
+    
     //
     // Create the graph
     //

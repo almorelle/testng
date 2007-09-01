@@ -112,7 +112,7 @@ public class AnnotationTestConverter {
    */
   @SuppressWarnings("deprecation")
   private Class<?> expectedValueTypeForKey(DocletTag tag, String key) {
-    Class<IAnnotation> annotationClass= m_annotationMap.get(tag.getName());
+    Class<?> annotationClass= m_annotationMap.get(tag.getName());
     if(annotationClass == null) {
       ppp("Found unknown testng annotation " + tag.getName() + " in file "
           + tag.getContext().getSource().getFile().getAbsolutePath() + " at line "
@@ -227,7 +227,7 @@ public class AnnotationTestConverter {
 
   private File m_outDir;
   private JavaDocBuilder m_qdox;
-  private HashMap<String, Class<IAnnotation>> m_annotationMap;
+  private HashMap<String, Class<?>> m_annotationMap;
 
   /**
    * @param files
@@ -238,10 +238,10 @@ public class AnnotationTestConverter {
     m_fileNames= files;
     m_outDir= destDir;
     m_qdox= new JavaDocBuilder();
-    Class<IAnnotation>[] annotations= AnnotationHelper.getAllAnnotations();
-    m_annotationMap= new HashMap<String, Class<IAnnotation>>(annotations.length);
+    Class<?>[] annotations= AnnotationHelper.getAllAnnotations();
+    m_annotationMap= new HashMap<String, Class<?>>(annotations.length);
     JDK14TagFactory factory= new JDK14TagFactory();
-    for(Class<IAnnotation> clazz : annotations) {
+    for(Class<?> clazz : annotations) {
       m_annotationMap.put(factory.getTagName(clazz), clazz);
     }
   }
