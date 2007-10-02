@@ -11,7 +11,7 @@ public class DepBugVerifyTest {
   @Test
   public void verify() {
     List<String> log = DepBugSampleTest.getLog();
-    System.out.println("VERIFY:" + log);
+    
     Assert.assertEquals(log, Arrays.asList(new String[] {
       "setup", "send", "get", "list", "destroy"
     }));

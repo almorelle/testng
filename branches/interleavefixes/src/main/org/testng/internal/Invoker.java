@@ -49,15 +49,18 @@ public class Invoker implements IInvoker {
   private ITestResultNotifier m_notifier;
   private IAnnotationFinder m_annotationFinder;
   private SuiteRunState m_suiteState;
+  private boolean m_skipFailedInvocationCounts;
 
   public Invoker(ITestContext testContext,
                  ITestResultNotifier notifier,
                  SuiteRunState state,
-                 IAnnotationFinder annotationFinder) {
+                 IAnnotationFinder annotationFinder,
+                 boolean skipFailedInvocationCounts) {
     m_testContext= testContext;
     m_suiteState= state;
     m_notifier= notifier;
     m_annotationFinder= annotationFinder;
+    m_skipFailedInvocationCounts = skipFailedInvocationCounts;
   }
 
   /**
@@ -688,10 +691,10 @@ public class Invoker implements IInvoker {
                            ITestContext testContext,
                            Map<String, String> parameters,
                            int parametersIndex) {
-    
-    List<Object> failedInstances = new ArrayList<Object>();
+    List<Object> failedInstances;
 
-    do {  
+    do {
+      failedInstances = new ArrayList<Object>();
       Map<String, String> allParameters = new HashMap<String, String>();
       /**
        * TODO: This recreates all the parameters every time when we only need
@@ -764,7 +767,7 @@ public class Invoker implements IInvoker {
     // - try to remove the isWithinThreadedMethod: still needed to determine the @BeforeMethod + @AfterMethod
     // - [DONE] solve the results different approaches: assignment and addAll
     //
-    // HINT: for invocationCount>1 and threadPoolSize>1 the method will be invoked on a thread pool
+    // For invocationCount>1 and threadPoolSize>1 the method will be invoked on a thread pool
     int invocationCount = (testMethod.getThreadPoolSize() > 1 ? 1 : testMethod.getInvocationCount());
     
     int failureCount = 0;
@@ -780,7 +783,7 @@ public class Invoker implements IInvoker {
         //
         if (MethodHelper.isEnabled(testMethod.getMethod(), m_annotationFinder)) {
             //
-            // HINT: If threadPoolSize specified, run this method in its own pool thread.
+            // If threadPoolSize specified, run this method in its own pool thread.
             //
             if (testMethod.getThreadPoolSize() > 1 && testMethod.getInvocationCount() > 1) {
                 return invokePooledTestMethods(testMethod, allTestMethods, suite, 
@@ -825,32 +828,66 @@ public class Invoker implements IInvoker {
                 
                 while (allParameterValues.hasNext()) {
                   Object[] parameterValues= allParameterValues.next();
-  
+                  List<ITestResult> tmpResults = new ArrayList<ITestResult>();
+
                   try {
-                      result = invokeTestMethod(instances,
-                                                testMethod,
-                                                parameterValues,
-                                                suite,
-                                                allParameterNames,
-                                                testClass,
-                                                beforeMethods,
-                                                afterMethods,
-                                                groupMethods);
+                    tmpResults.addAll(invokeTestMethod(instances,
+                                                       testMethod,
+                                                       parameterValues,
+                                                       suite,
+                                                       allParameterNames,
+                                                       testClass,
+                                                       beforeMethods,
+                                                       afterMethods,
+                                                       groupMethods));
                   }
                   finally {
                     List<Object> failedInstances = new ArrayList<Object>();
-                    
-                    failureCount = handleInvocationResults(testMethod, result,
-                        failedInstances, failureCount, expectedExceptionClasses, true);
-                    for (int i = 0; i < failedInstances.size(); i++) {
-                      List<ITestResult> retryResults = new ArrayList<ITestResult>();
 
-                      failureCount = retryFailed(failedInstances.toArray(),
-                          i, testMethod, suite, testClass, beforeMethods,
-                          afterMethods, groupMethods, retryResults,
-                          failureCount, expectedExceptionClasses,
-                          testContext, parameters, parametersIndex);
+                    failureCount = handleInvocationResults(testMethod, tmpResults,
+                        failedInstances, failureCount, expectedExceptionClasses, true);
+                    if (failedInstances.isEmpty()) {
+                      result.addAll(tmpResults);
+                    } else {
+                      for (int i = 0; i < failedInstances.size(); i++) {
+                        List<ITestResult> retryResults = new ArrayList<ITestResult>();
+
+                        failureCount = 
+                         retryFailed(failedInstances.toArray(),
+                         i, testMethod, suite, testClass, beforeMethods,
+                         afterMethods, groupMethods, retryResults,
+                         failureCount, expectedExceptionClasses,
+                         testContext, parameters, parametersIndex);
                       result.addAll(retryResults);
+                      }
+                    }
+                    
+                    //
+                    // If we have a failure, skip all the
+                    // other invocationCounts
+                    //
+                    
+                    // If not specified globally, use the attribute
+                    // on the annotation
+                    //
+                    if (! m_skipFailedInvocationCounts) {
+                      m_skipFailedInvocationCounts = testMethod.skipFailedInvocations();
+                    }
+                    if (failureCount > 0 && m_skipFailedInvocationCounts) {
+                      while (invocationCount-- > 0) {
+                        ITestResult r = 
+                          new TestResult(testMethod.getTestClass(),
+                            instances[0],
+                            testMethod,
+                            null,
+                            start,
+                            System.currentTimeMillis());
+                        r.setStatus(TestResult.SKIP);
+                        result.add(r);
+                        runTestListeners(r);
+                        m_notifier.addSkippedTest(testMethod, r);
+                      }
+                      break;
                     }
                   }
                   parametersIndex++;
