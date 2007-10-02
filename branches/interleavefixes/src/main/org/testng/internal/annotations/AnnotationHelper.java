@@ -206,7 +206,8 @@ public class AnnotationHelper {
             boolean hasTestNGAnnotation =
               isAnnotationPresent(annotationFinder, m, IFactory.class) ||
               isAnnotationPresent(annotationFinder, m, ITest.class) ||
-              isAnnotationPresent(annotationFinder, m, CONFIGURATION_CLASSES);
+              isAnnotationPresent(annotationFinder, m, CONFIGURATION_CLASSES) ||
+              isAnnotationPresent(annotationFinder, m, IDataProvider.class);
             boolean isPublic = Modifier.isPublic(m.getModifiers());
             if ((isPublic && hasClassAnnotation && (! hasTestNGAnnotation)) || hasMethodAnnotation) {     
               
@@ -221,14 +222,7 @@ public class AnnotationHelper {
                     
                 continue;
               }
-              
-              // Skip the method if it has a return type
-              if (m.getReturnType() != void.class) {
-                Utils.log("", 3, "Method " + m + " has a @Test annotation"
-                    + " but also a return value:  ignoring it.");
-                continue;
-              }
-              
+                            
               String key = createMethodKey(m);
               if (null == vResult.get(key)) {
                 ITestNGMethod tm = new TestNGMethod(rootClass, m, annotationFinder);
