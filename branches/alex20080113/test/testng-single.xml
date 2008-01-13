@@ -1,0 +1,29 @@
+<!DOCTYPE suite SYSTEM "http://beust.com/testng/testng-1.0.dtd" >
+  
+<suite name="Single" verbose="10"
+    
+  >
+
+<!--
+<suite-files>
+  <suite-file path="./testng.xml" />
+  <suite-file path="../test-14/testng.xml" />
+</suite-files>
+-->
+  
+<!-- 
+  <test name="InvocationCountFirstAndLastTime" >
+    <classes>
+      <class name="test.invocationcount.VerifyTest" />
+     </classes>
+  </test>
+-->
+ 
+  <test name="BeforeMethod">
+    <classes>
+      <class name="test.dataprovider.TestInstanceFactory" />
+    </classes>      
+  </test>
+
+</suite>
+

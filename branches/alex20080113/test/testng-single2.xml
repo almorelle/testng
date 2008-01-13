@@ -1,0 +1,10 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+  
+<suite name="Single" verbose="1" parallel="false"  >
+  <test name="RetryAnalyzer">
+	<classes>
+		<class name="test.retryAnalyzer.RetryAnalyzerTest" />
+	</classes>
+  </test>
+</suite>
+
