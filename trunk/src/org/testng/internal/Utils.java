@@ -205,7 +205,7 @@ public final class Utils {
   private static void writeFile(File outputFile, String sb, String encoding, boolean append) {
     BufferedWriter fw = null;
     try {
-      if (! outputFile.exists()) outputFile.createNewFile();
+      if (!outputFile.exists()) outputFile.createNewFile();
       OutputStreamWriter osw= null;
       if (null != encoding) {
         osw = new OutputStreamWriter(new FileOutputStream(outputFile, append), encoding);
