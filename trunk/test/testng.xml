@@ -1,6 +1,6 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
   
-<suite name="TestNG JDK 1.5" verbose="1" parallel="false" thread-count="2"
+<suite name="TestNG" verbose="1" parallel="false" thread-count="2"
     data-provider-thread-count="3">
   
   <test name="Nopackage">
@@ -99,6 +99,7 @@
       <class name="test.abstractconfmethod.C" />
       <class name="test.issue78.NonPublicClassTest"/>
       <class name="test.listeners.ListenerTest"/>
+      <class name="test.preserveorder.PreserveOrderTest" />
     </classes>
   </test>
   
@@ -414,6 +415,12 @@
       <class name="test.dataprovider.FailingIterableDataProviderTest" />
       <class name="test.dataprovider.ClassTest" />
       <class name="test.dataprovider.InheritedDataProviderTest" />
+    </classes>
+  </test>
+
+  <test name="DP">
+    <classes>
+      <class name="test.dataprovider.ParallelDataProviderTest" />
     </classes>
   </test>
 	

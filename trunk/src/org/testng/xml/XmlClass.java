@@ -22,27 +22,30 @@ public class XmlClass implements Serializable, Cloneable {
   private String       m_name = null;
   private Class        m_class = null;
   private Boolean      m_declaredClass = null;
+  /** The index of this class in the <test> tag */
+  private int m_index;
 
   public XmlClass(String name) {
-    init(name, null, Boolean.TRUE);
+    init(name, null, Boolean.TRUE, 0);
   }
 
   public XmlClass(Class className) {
-    init(className.getName(), null, Boolean.TRUE );
+    init(className.getName(), null, Boolean.TRUE, 0);
   }
 
-  public XmlClass(String name, Boolean declaredClass) {
-    init(name, null, declaredClass);
+  public XmlClass(String name, Boolean declaredClass, int index) {
+    init(name, null, declaredClass, index);
   }
 
   public XmlClass(Class className, Boolean declaredClass) {
-    init(className.getName(), className, declaredClass);
+    init(className.getName(), className, declaredClass, 0);
   }
 
-  private void init(String name, Class className, Boolean declaredClass) {
+  private void init(String name, Class className, Boolean declaredClass, int index) {
     m_name = name;
     m_class = className;
     m_declaredClass = declaredClass;
+    m_index = index;
   }
 
   /**
@@ -132,13 +135,9 @@ public class XmlClass implements Serializable, Cloneable {
       xsb.push("methods");
       
       for (XmlInclude m : getIncludedMethods()) {
-        Properties p = new Properties();
-        p.setProperty("name", m.getName());
-        if (m.getInvocationNumbers().size() > 0) {
-          p.setProperty("invocation-numbers", listToString(m.getInvocationNumbers()).toString());
-        }
-        xsb.addEmptyElement("include", p);
+        xsb.getStringBuffer().append(m.toXml(indent + "    "));
       }
+
       for (String m: getExcludedMethods()) {
         Properties p= new Properties();
         p.setProperty("name", m);
@@ -151,13 +150,12 @@ public class XmlClass implements Serializable, Cloneable {
     else {
       xsb.addEmptyElement("class", pro);
     }
-    
 
     return xsb.toXML();
 
   }
   
-  private String listToString(List<Integer> invocationNumbers) {
+  public static String listToString(List<Integer> invocationNumbers) {
     StringBuilder result = new StringBuilder();
     int i = 0;
     for (Integer n : invocationNumbers) {
@@ -172,12 +170,21 @@ public class XmlClass implements Serializable, Cloneable {
    */
   @Override
   public Object clone() {
-    XmlClass result = new XmlClass(getName(), getDeclaredClass());
+    XmlClass result = new XmlClass(getName(), getDeclaredClass(), getIndex());
     result.setExcludedMethods(getExcludedMethods());
     result.setIncludedMethods(getIncludedMethods());
     
     return result;
   }
 
+  /**
+   * Note that this attribute does not come from the XML file, it's calculated
+   * internally and represents the order in which this class was found in its
+   * &lt;test&gt; tag.  It's used to calculate the ordering of the classes
+   * when preserve-order is true.
+   */
+  public int getIndex() {
+    return m_index;
+  }
 
 }

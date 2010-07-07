@@ -29,8 +29,8 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
   private static final int AFTER_TEST = 4;
   private static final int BEFORE_CLASS = 5;
   private static final int AFTER_CLASS = 6;
-  private static final int BEFORE_TESTMETHOD = 7;
-  private static final int AFTER_TESTMETHOD = 8;
+  private static final int BEFORE_TEST_METHOD = 7;
+  private static final int AFTER_TEST_METHOD = 8;
   private static final int BEFORE_GROUPS = 9;
   private static final int AFTER_GROUPS = 10;
     
@@ -51,38 +51,26 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
 
   public ITestNGMethod[] getBeforeClassMethods(Class cls) {
     return findConfiguration(cls, BEFORE_CLASS);
-//    return findConfiguration(cls, false, true, false /* isSuite */);
   }
 
   public ITestNGMethod[] getAfterClassMethods(Class cls) {
     return findConfiguration(cls, AFTER_CLASS);
-//    return findConfiguration(cls, false /* method */, false, /* before */
-//                             false /* isSuite */);
   }
 
   public ITestNGMethod[] getBeforeTestMethods(Class cls) {
-    return findConfiguration(cls, BEFORE_TESTMETHOD);
-//    return findConfiguration(cls, true /* method */, true /* before */,
-//                             false /* isSuite */);
+    return findConfiguration(cls, BEFORE_TEST_METHOD);
   }
 
   public ITestNGMethod[] getAfterTestMethods(Class cls) {
-    return findConfiguration(cls, AFTER_TESTMETHOD);
-//    return findConfiguration(cls, true /* method */, false /* before */,
-//                             false /* isSuite */);
+    return findConfiguration(cls, AFTER_TEST_METHOD);
   }
 
   public ITestNGMethod[] getBeforeSuiteMethods(Class cls) {
     return findConfiguration(cls, BEFORE_SUITE);
-//    return findConfiguration(cls,
-//                             false /*method */, true /* before */,
-//                             true /* suite */);
   }
 
   public ITestNGMethod[] getAfterSuiteMethods(Class cls) {
     return findConfiguration(cls, AFTER_SUITE);
-//    return findConfiguration(cls, false /* method */, false /* before */,
-//                             true /* suite */);
   }
 
   public ITestNGMethod[] getBeforeTestConfigurationMethods(Class clazz) {
@@ -106,10 +94,10 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
     
     Set<Method> methods = ClassHelper.getAvailableMethods(clazz);
 
-    for(Method m : methods) {
+    for (Method m : methods) {
       IConfigurationAnnotation configuration = AnnotationHelper.findConfiguration(m_annotationFinder, m);
 
-      if(null == configuration) {
+      if (null == configuration) {
         continue;
       }
       
@@ -150,11 +138,11 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
           create = configuration.getAfterTestClass();
           isAfterClass = true;
           break;
-        case BEFORE_TESTMETHOD:
+        case BEFORE_TEST_METHOD:
           create = configuration.getBeforeTestMethod();
           isBeforeTestMethod = true;
           break;
-        case AFTER_TESTMETHOD:
+        case AFTER_TEST_METHOD:
           create = configuration.getAfterTestMethod();
           isAfterTestMethod = true;
           break;
@@ -197,8 +185,6 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
 
     return tmResult;
   }
-   
-
 
   private void addConfigurationMethod(Class<?> clazz,
                                       List<ITestNGMethod> results,
@@ -229,11 +215,6 @@ public class TestNGMethodFinder<ITestNGMetthod> implements ITestMethodFinder {
                                                          afterGroups);
       results.add(confMethod);
     }
-  }
-
-  private static void ppp(String s) {
-    System.out.println("[DefaultTestMethodFinder] " + s);
-  }
-  
+  }  
 
 }
