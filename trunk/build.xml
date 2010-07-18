@@ -49,10 +49,10 @@
 
   <target name="copy-resources" description="Copies resources.">
     <copy verbose="false"
-          file="src/testng-1.0.dtd"
+          file="${src.resources.dir}/testng-1.0.dtd"
           todir="${build.dir}" />
     <copy verbose="false"
-          file="src/testngtasks"
+          file="${src.dir}/testngtasks"
           todir="${build.dir}" />
     <copy todir="${build.dir}">
       <fileset dir="./resources">
@@ -72,21 +72,21 @@
   <target name="build" depends="prepare,compile,dist-bsh-guice" />
 
   <target name="single">
-    <ant antfile="test/build.xml" target="run:single"/>
+    <ant antfile="${test.dir}/build.xml" target="run:single"/>
   </target>
 
   <!-- ==================================================================== -->
   <!-- Compile                                                              -->
   <!-- ==================================================================== -->
 
+  <path id="compile2.cp">
+    <fileset dir="${lib.dir}" includes="*.jar" />
+  </path>
+
   <target name="compile"
           depends="prepare,copy-resources"
           description="Compiles sources">
     <echo message="                                 -- Compiling sources --" />
-
-    <path id="compile2.cp">
-      <fileset dir="${lib.dir}" includes="*.jar" />
-    </path>
 
     <javac classpathref="compile2.cp"
            verbose="false"
@@ -105,12 +105,12 @@
   </target>
 
   <target name="tests" depends="compile" description="runs all JDK5 tests with JDK5 distro">
-    <ant inheritall="no" antfile="test/build.xml" />
+    <ant inheritall="no" antfile="build-tests.xml" />
   </target>
   
   <target name="test-ant">
     <echo message="                                 -- Testing ant testng task functionality --" />
-    <ant inheritall="no" antfile="test/ant/build.xml" />
+    <ant inheritall="no" antfile="build-ant.xml" />
   </target>
 
   <!-- ==================================================================== -->
@@ -119,7 +119,7 @@
 
   <target name="javadocs">
     <javadoc additionalparam="-quiet" destdir="javadocs" source="1.5" windowtitle="TestNG"
-        classpath="${testng.jar}:${lib.dir}/ant.jar:${guice.jar}" verbose="false">
+      classpath="${testng.jar}" classpathref="compile2.cp" verbose="false">
       <fileset dir="${src.dir}" defaultexcludes="yes">
         <include name="org/testng/*.java" />
       </fileset>
@@ -201,10 +201,6 @@
       <zipfileset dir="resources"
                prefix="${zip.dir}/resources" 
             includes="**/*.css"/>
-      <zipfileset dir="test"
-                  prefix="${zip.dir}/test"
-                  includes="**/*.properties,**/*.java,build.xml,testng.xml"
-                  excludes="test-output/**,report/**" />
       <zipfileset dir="${lib.dir}"
                   prefix="${zip.dir}/${lib.dir}"
                   includes="${beanshell.jar},${concurrent.jar},${guice.jar}" />
@@ -219,7 +215,7 @@
       </filterchain>
     </copy>
     <jar destfile="${build.maven-bundle.dir}/${sources.testng.jar}">
-      <fileset dir="src" />
+      <fileset dir="${src.dir}" />
     </jar>
 
     <exec executable="gpg">
@@ -321,7 +317,7 @@
     <delete failonerror="false">
       <fileset dir="." includes="testng*.jar,*.zip" />
     </delete>
-    <ant antfile="test/build.xml" target="clean" />
+    <ant antfile="build-tests.xml" target="clean" />
     <ant dir="examples" target="clean" />
   </target>
 

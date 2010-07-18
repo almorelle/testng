@@ -681,6 +681,14 @@ You need to specify at least one XML file describing the TestNG suite you are tr
         </tr>
 
         <tr>
+            <td>-methodselectors</td>
+	    <td>A comma-separated list of Java classes and method
+            priorities that define method selectors.</td>
+	    <td>Lets you specify method selectors on the command
+            line. For example: <tt>com.example.Selector1:3,com.example.Selector2:2</tt></td>
+        </tr>
+
+	<tr>
             <td>-parallel</td>
 	    <td>methods|tests</td>
 	    <td>If specified, sets the default mechanism used to determine how to use parallel threads when running tests. If not set, default mechanism is not to use parallel threads at all. This can be overridden in the suite definition.</td>
@@ -1888,6 +1896,28 @@ TestNG lets you declare additional parameters in your methods.  When this happen
   <tt>ITestContext</tt> or <tt>java.lang.reflect.Method</tt>.  The
   latter parameter will receive the test method that is about to be invoked.
 </ul>
+
+You can turn off injection with the <tt>@NoInjection</tt> annotation:
+
+<pre class="brush: java; highlight: [9]">
+public class NoInjectionTest {
+
+  @DataProvider(name = "provider")
+  public Object[][] provide() throws Exception {
+      return new Object[][] { { CC.class.getMethod("f") } };
+  }
+
+  @Test(dataProvider = "provider")
+  public void withoutInjection(@NoInjection Method m) {
+      Assert.assertEquals(m.getName(), "f");
+  }
+
+  @Test(dataProvider = "provider")
+  public void withInjection(Method m) {
+      Assert.assertEquals(m.getName(), "withInjection");
+  }
+}
+</pre>
 
 
 <!-------------------------------------

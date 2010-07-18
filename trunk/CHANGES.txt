@@ -1,5 +1,8 @@
 Current:
 
+Added: -configfailurepolicy (Todd Quessenberry)
+Added: -methodselectors (Todd Quessenberry)
+Added: @NoInjection
 Added: <test preserve-order="true">
 Added: -testnames (command line) and testnames (ant)
 Added: New ant task tag:  propertyset (Todd Wells)
@@ -7,6 +10,7 @@ Added: ITestNGListenerFactory
 Added: Passing command line properties via the ant task and doc update (Todd Wells)
 Added: Hierarchical XmlSuites (Nalin Makar) 
 Added: Reporter#clear()
+Fixed: Identical configuration methods were not always invoked in the correct order in superclasses (Nalin Makar) 
 Fixed: @DataProvider(parallel = true) was passing incorrect parameters with injection
 Fixed: Replaced @Test(sequential) with @Test(singleThreaded)
 Fixed: If inherited configuration methods had defined deps, they could be invoked in incorrect order (Nalin Makar)
