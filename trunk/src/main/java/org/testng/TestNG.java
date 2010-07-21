@@ -2,6 +2,7 @@ package org.testng;
 
 
 import com.beust.jcommander.JCommander;
+import com.beust.jcommander.ParameterDescription;
 import com.beust.jcommander.ParameterException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -48,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -112,6 +114,8 @@ public class TestNG {
   public static final String JAVADOC_ANNOTATION_TYPE = AnnotationTypeEnum.JAVADOC.getName();
   
   private static TestNG m_instance;
+
+  private static JCommander m_jCommander;
 
   protected List<XmlSuite> m_suites = Lists.newArrayList();
   protected List<XmlSuite> m_cmdlineSuites;
@@ -843,10 +847,33 @@ public class TestNG {
       setStatus(HAS_NO_TEST);
       if (TestRunner.getVerbose() > 1) {
         System.err.println("[TestNG] No tests found. Nothing was run");
+        usage();
       }
     }
   }
-  
+
+  private static void usage() {
+    Set<String> hidden = new HashSet<String>() {{
+      add("-host");
+      add("-master");
+      add("-slave");
+      add("-port");
+    }};
+    if (m_jCommander != null) {
+      System.out.println("Usage: java " + TestNG.class.getName() + " [options] <XML suite files>");
+      System.out.println("    Options:");
+      for (ParameterDescription p : m_jCommander.getParameters()) {
+        if (! hidden.contains(p.getParameter().names()[0])) {
+          StringBuilder sb = new StringBuilder();
+          for (String n : p.getParameter().names()) {
+            sb.append(n).append(" ");
+          }
+          System.out.println("\t" + sb.toString() + "\n\t\t" + p.getDescription());
+        }
+      }
+    }
+  }
+
   private void generateReports(List<ISuite> suiteRunners) {
     for (IReporter reporter : m_reporters) {
       try {
@@ -884,6 +911,7 @@ public class TestNG {
     else {
       setStatus(HAS_NO_TEST);
       System.err.println("[ERROR]: No test suite found. Nothing to run");
+      usage();
     }
     
     //
@@ -1088,7 +1116,8 @@ public class TestNG {
     } else {
       // New style parsing
       CommandLineArgs cla = new CommandLineArgs();
-      new JCommander(cla).parse(argv);
+      m_jCommander = new JCommander(cla);
+      m_jCommander.parse(argv);
       validateCommandLineParameters(cla);
       result.configure(cla);
     }
@@ -1137,8 +1166,10 @@ public class TestNG {
 //      setTestSuites(testNgXml);
 //    }
 
+    // Note: can't use a Boolean field here because we are allowing a boolean
+    // parameter with an arity of 1 ("-usedefaultlisteners false")
     if (cla.useDefaultListeners != null) {
-      setUseDefaultListeners(cla.useDefaultListeners);
+      setUseDefaultListeners("true".equalsIgnoreCase(cla.useDefaultListeners));
     }
 
     setGroups(cla.groups);
@@ -1500,14 +1531,6 @@ public class TestNG {
     return (getStatus() & HAS_SKIPPED) == HAS_SKIPPED;
   }
   
-  /**
-   * Prints the usage message to System.out. This message describes all the command line
-   * options.
-   */
-  public static void usage() {
-    TestNGCommandLineArgs.usage();
-  }
-  
   static void exitWithError(String msg) {
     System.err.println(msg);
     usage();
@@ -1679,4 +1702,10 @@ public class TestNG {
     m_dataProviderThreadCount = count;
   }
 
+  /** Add a class loader to the searchable loaders. */
+  public void addClassLoader(final ClassLoader loader) {
+    if (loader != null) {
+      ClassHelper.addClassLoader(loader);
+    }
+  }
 }
