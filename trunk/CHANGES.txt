@@ -1,5 +1,6 @@
 Current:
 
+Added: -methods
 Added: -configfailurepolicy (Todd Quessenberry)
 Added: -methodselectors (Todd Quessenberry)
 Added: @NoInjection
@@ -10,6 +11,7 @@ Added: ITestNGListenerFactory
 Added: Passing command line properties via the ant task and doc update (Todd Wells)
 Added: Hierarchical XmlSuites (Nalin Makar) 
 Added: Reporter#clear()
+Fixed: NullPointerException when a suite produces no results (Cefn Hoile)
 Fixed: Identical configuration methods were not always invoked in the correct order in superclasses (Nalin Makar) 
 Fixed: @DataProvider(parallel = true) was passing incorrect parameters with injection
 Fixed: Replaced @Test(sequential) with @Test(singleThreaded)
@@ -35,6 +37,10 @@ Fixed: Exceptions thrown by IInvokedMethodListeners were not caught (Nalin Makar
 Fixed: @Listeners now works on base classes as well
 Fixed: Test priorities were not working properly in non-parallel mode
 Fixed: @Listeners wasn't working properly with ITestListener
+
+Eclipse
+
+Fixed: New wizard was creating classes called "NewTest"
 
 Doc
 Updated Maven documentation (Brett Porter)

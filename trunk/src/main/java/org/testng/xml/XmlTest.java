@@ -18,7 +18,7 @@ import java.util.Properties;
  * @author <a href = 'mailto:the_mindstorm[at]evolva[dot]ro'>Alexandru Popescu</a>
  */
 public class XmlTest implements Serializable, Cloneable {
-  public static int DEFAULT_TIMEOUT_MS = 10000;   // 10 seconds
+  public static int DEFAULT_TIMEOUT_MS = Integer.MAX_VALUE;
 
   private final XmlSuite m_suite;
   private String m_name = TestNG.DEFAULT_COMMAND_LINE_SUITE_NAME;
@@ -48,7 +48,7 @@ public class XmlTest implements Serializable, Cloneable {
   private Boolean m_skipFailedInvocationCounts;
   private Map<String, List<Integer>> m_failedInvocationNumbers = null; // lazily initialized
 
-  private Boolean m_preserveOrder;
+  private String m_preserveOrder;
 
   /**
    * Constructs a <code>XmlTest</code> and adds it to suite's list of tests. 
@@ -96,6 +96,7 @@ public class XmlTest implements Serializable, Cloneable {
    * @param classes The classes to set.
    * @deprecated use setXmlClasses
    */
+  @Deprecated
   public void setClassNames(List<XmlClass> classes) {
     m_xmlClasses = classes;
   }
@@ -541,11 +542,11 @@ public class XmlTest implements Serializable, Cloneable {
     }
   }
 
-  public void setPreserveOrder(boolean preserveOrder) {
+  public void setPreserveOrder(String preserveOrder) {
     m_preserveOrder = preserveOrder;
   }
 
-  public Boolean getPreserveOrder() {
-    return m_preserveOrder != null ? m_preserveOrder : false;
+  public String getPreserveOrder() {
+    return m_preserveOrder;
   }
 }
