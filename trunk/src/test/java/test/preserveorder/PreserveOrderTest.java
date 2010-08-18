@@ -1,9 +1,7 @@
 package test.preserveorder;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.testng.Assert;
+import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
 import org.testng.annotations.Test;
 import org.testng.xml.XmlClass;
@@ -12,6 +10,9 @@ import org.testng.xml.XmlTest;
 
 import test.BaseLogTest;
 import test.SimpleBaseTest;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class PreserveOrderTest extends SimpleBaseTest {
 
@@ -86,6 +87,22 @@ public class PreserveOrderTest extends SimpleBaseTest {
         }
       }
     }
+  }
 
+  @Test
+  public void orderShouldBePreservedWithDependencies() {
+    TestNG tng = create();
+    XmlSuite s = createXmlSuite("PreserveOrder");
+    XmlTest t = new XmlTest(s);
+    t.getXmlClasses().add(new XmlClass("test.preserveorder.ChuckTest4"));
+    t.getXmlClasses().add(new XmlClass("test.preserveorder.ChuckTest3"));
+    t.setPreserveOrder("true");
+    tng.setXmlSuites(Arrays.asList(s));
+    TestListenerAdapter tla = new TestListenerAdapter();
+    tng.addListener(tla);
+    tng.run();
+
+    verifyPassedTests(tla, "c4TestOne", "c4TestTwo", "c4TestThree",
+        "c3TestOne", "c3TestTwo", "c3TestThree");
   }
 }
