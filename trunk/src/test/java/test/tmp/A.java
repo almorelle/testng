@@ -1,81 +1,44 @@
 package test.tmp;
 
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import test.SimpleBaseTest;
-import test.listeners.ResultListener;
-
 //@Test(sequential = true)
-@Listeners(ResultListener.class)
-public class A extends SimpleBaseTest {
-  private int m_n;
+@Listeners(C2.class)
+public class A extends C2 {
 
-  public A() {}
-
-  public A(int n) {
-    m_n = n;
-  }
-
-  private void log(String s) {
-    System.out.println(" [A(" + m_n + ") thread:" + Thread.currentThread().getId() + "] " + s);
-  }
-
-  @DataProvider
-  public Object[][] dp() {
-    return new Object[][] {
-      new Object[] { 42 },   
+//  @Factory
+  public Object[] f() {
+    return new Object[] {
+        new A(),
+        new A()
     };
   }
 
-  @BeforeClass
-  public void beforeClass() {
-//    throw new RuntimeException();
-  }
+//  @BeforeClass(groups = "pre", dependsOnMethods = "bc2")
+//  public void bc1() {
+//    System.out.println("Before class 1");
+//  }
+//
+//  @BeforeClass(groups = "pre") // , dependsOnMethods = "bc1")
+//  public void bc2() {
+//    System.out.println("Before class 2");
+//  }
 
-//  @AfterClass
-//  public void afterClass(ITestResult tr) {
-//    System.out.println("Result:" + tr.getEndMillis());
+//  @AfterMethod
+//  public void am() {
+//    System.out.println("After method");
 //  }
 
   @Test
-  public void atest1() {
-    try {
-      Thread.sleep(1*1000);
-    } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+  public void a1() {
+    System.out.println("a1 throwing");
+//    throw new RuntimeException();
+//    System.out.println("a1 " + Thread.currentThread().getId());
   }
 
-//  @Test(dependsOnMethods = "atest1")
-  public void atest2() {
-    log("atest2");
+//  @Test
+  public void a2() {
+    System.out.println("a2 " + Thread.currentThread().getId());
   }
-
-//  @Test(priority = 3)
-  public void atest3() {
-  }
-
-//  @Override
-  public String getTestName() {
-    return "This is test A";
-  }
-
-//  @Test(groups = "mytest", dependsOnMethods = "g")
-//  public void f() {
-//  }
-//
-//  @AfterClass
-//  public void ac() {
-//    log("afterClass");
-//  }
-
-  public static void main(String[] args) {
-//    TestNG tng = create();
-  }
-
-
 }

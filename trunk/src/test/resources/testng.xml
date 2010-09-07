@@ -99,6 +99,7 @@
       <class name="test.listeners.ListenerTest"/>
       <class name="test.preserveorder.PreserveOrderTest" />
       <class name="test.listeners.ResultEndMillisTest" />
+      <class name="test.SerializationTest" />
     </classes>
   </test>
   
@@ -468,6 +469,8 @@
     <classes>
       <class name="test.hook.HookSuccessTest" />
       <class name="test.hook.HookFailureTest" />
+      <class name="test.hook.ConfigurableSuccessTest" />
+      <class name="test.hook.ConfigurableFailureTest" />
     </classes>
   </test>
   

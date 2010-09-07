@@ -9,6 +9,7 @@ import org.testng.internal.ClassInfoMap;
 import org.testng.internal.ConfigurationGroupMethods;
 import org.testng.internal.Constants;
 import org.testng.internal.DynamicGraph;
+import org.testng.internal.IConfiguration;
 import org.testng.internal.IConfigurationListener;
 import org.testng.internal.IInvoker;
 import org.testng.internal.IMethodWorker;
@@ -129,43 +130,48 @@ public class TestRunner implements ITestContext, ITestResultNotifier, IWorkerFac
   private String m_host;
 
   // Defined dynamically depending on <test preserve-order="true/false">
-  private IMethodInterceptor m_methodInterceptor;
+  private transient IMethodInterceptor m_methodInterceptor;
 
-  private ClassMethodMap m_classMethodMap;
-  private TestNGClassFinder m_testClassFinder;
+  private transient ClassMethodMap m_classMethodMap;
+  private transient TestNGClassFinder m_testClassFinder;
+  private transient IConfiguration m_configuration;
 
-  public TestRunner(ISuite suite,
+  public TestRunner(IConfiguration configuration,
+                    ISuite suite,
                     XmlTest test,
                     String outputDirectory,
                     IAnnotationFinder finder,
                     boolean skipFailedInvocationCounts,
                     List<IInvokedMethodListener> invokedMethodListeners) 
   {
-    init(suite, test, outputDirectory, finder, skipFailedInvocationCounts,
+    init(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts,
         invokedMethodListeners);
   }
 
-  public TestRunner(ISuite suite, XmlTest test, 
+  public TestRunner(IConfiguration configuration, ISuite suite, XmlTest test, 
     IAnnotationFinder finder, boolean skipFailedInvocationCounts) 
   {
-    init(suite, test, suite.getOutputDirectory(), finder, skipFailedInvocationCounts,
+    init(configuration, suite, test, suite.getOutputDirectory(), finder, skipFailedInvocationCounts,
         null);
   }
 
-  public TestRunner(ISuite suite, XmlTest test, boolean skipFailedInvocationCounts,
+  public TestRunner(IConfiguration configuration, ISuite suite, XmlTest test,
+      boolean skipFailedInvocationCounts,
       List<IInvokedMethodListener> listeners) {
-    init(suite, test, suite.getOutputDirectory(), 
+    init(configuration, suite, test, suite.getOutputDirectory(), 
         suite.getAnnotationFinder(test.getAnnotations()),
         skipFailedInvocationCounts, listeners);
   }
 
-  private void init(ISuite suite,
+  private void init(IConfiguration configuration,
+                    ISuite suite,
                     XmlTest test,
                     String outputDirectory,
                     IAnnotationFinder annotationFinder,
                     boolean skipFailedInvocationCounts,
                     List<IInvokedMethodListener> invokedMethodListeners)
   {
+    m_configuration = configuration;
     m_xmlTest= test;
     m_suite = suite;
     m_testName = test.getName();
@@ -186,7 +192,7 @@ public class TestRunner implements ITestContext, ITestResultNotifier, IWorkerFac
     }
 
     m_annotationFinder= annotationFinder;
-    m_invoker = new Invoker(this, this, m_suite.getSuiteState(), m_annotationFinder,
+    m_invoker = new Invoker(m_configuration, this, this, m_suite.getSuiteState(),
         m_skipFailedInvocationCounts, invokedMethodListeners);
 
     if (suite.getParallel() != null) {
@@ -233,6 +239,43 @@ public class TestRunner implements ITestContext, ITestResultNotifier, IWorkerFac
     addConfigurationListener(m_confListener);
   }
 
+  class ListenerHolder {
+    List<Class<? extends ITestNGListener>> listenerClasses;
+    Class<? extends ITestNGListenerFactory> listenerFactoryClass;
+  }
+
+  /**
+   * @return all the @Listeners annotations found in the current class and its
+   * superclasses.
+   */
+  private ListenerHolder findAllListeners(Class<?> cls) {
+    ListenerHolder result = new ListenerHolder();
+    result.listenerClasses = Lists.newArrayList();
+
+    do {
+      IListeners l = (IListeners) m_annotationFinder.findAnnotation(cls, IListeners.class);
+      if (l != null) {
+        Class<? extends ITestNGListener>[] classes = l.getValue();
+        for (Class<? extends ITestNGListener> c : classes) {
+          result.listenerClasses.add(c);
+
+          if (ITestNGListenerFactory.class.isAssignableFrom(c)) {
+            if (result.listenerFactoryClass == null) {
+              result.listenerFactoryClass = (Class<? extends ITestNGListenerFactory>) c;
+            }
+            else {
+              throw new TestNGException("Found more than one class implementing" +
+                  "ITestNGListenerFactory:" + c + " and " + result.listenerFactoryClass);
+            }
+          }
+        }
+      }
+      cls = cls.getSuperclass();
+    } while (cls != Object.class);
+
+    return result;
+  }
+
   private void initListeners() {
     //
     // Find all the listener factories and collect all the listeners requested in a
@@ -242,21 +285,10 @@ public class TestRunner implements ITestContext, ITestResultNotifier, IWorkerFac
     Class<? extends ITestNGListenerFactory> listenerFactoryClass = null;
 
     for (IClass cls : getTestClasses()) {
-      IAnnotationFinder finder = m_annotationFinder;
       Class<? extends ITestNGListenerFactory> realClass = cls.getRealClass();
-      IListeners l = (IListeners) finder.findAnnotation(realClass, IListeners.class);
-      if (ITestNGListenerFactory.class.isAssignableFrom(realClass)) {
-        if (listenerFactoryClass == null) {
-          listenerFactoryClass = realClass;
-        }
-        else {
-          throw new TestNGException("Found more than one class implementing" +
-              "ITestNGListenerFactory:" + realClass + " and " + listenerFactoryClass);
-        }
-      }
-      if (l != null) {
-        listenerClasses.addAll(Arrays.asList(l.getValue()));
-      }
+      ListenerHolder listenerHolder = findAllListeners(realClass);
+      if (listenerFactoryClass == null) listenerFactoryClass = listenerHolder.listenerFactoryClass;
+      listenerClasses.addAll(listenerHolder.listenerClasses);
     }
 
     //

@@ -22,21 +22,28 @@
     <groups>
       <run>
         <exclude name="broken" />
-      </run>
-    </groups>
-    <parameter name="count" value="10"/>
-    <classes>
-      <class name="test.thread.ParallelSuiteTest"/>
 <!-- 
+        <include name="verifyBaseClassTestListener" />
+ -->
+       </run>
+    </groups>
+    <parameter name="string" value="s"/>
+    <classes>
+      <class name="test.tmp.A"/>
+<!-- 
+      <class name="test.tmp.C2"/>
+      </class>
+        <methods>
+          <include name="verifyBaseClassTestListener" />
+        </methods>
+      <class name="test.inject.InjectTestContextTest" />
+      <class name="test.sample.InvocationCountTest" />
       <class name="test.preserveorder.SibTest"/>
       <class name="test.preserveorder.EdnTest"/>
  -->
      </classes>
   </test>
 <!-- 
- <methods>
-          <include name="orderShouldBePreservedWithDependencies" />
-        </methods>
       <class name="test.xml.XmlVerifyTest">
       <class name="test.listeners.ResultEndMillisTest">
        </class>
