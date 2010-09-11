@@ -18,6 +18,7 @@ public class HookableTest extends BaseTest {
   public void bm() {
     HookSuccessTest.m_hook = false;
     HookSuccessTest.m_testWasRun = false;
+    HookSuccessTest.m_parameter = null;
     HookFailureTest.m_hook = false;
     HookFailureTest.m_testWasRun = false;
     HookListener.m_hook = false;
@@ -26,7 +27,9 @@ public class HookableTest extends BaseTest {
     BaseConfigurable.m_bm = false;
     BaseConfigurable.m_bs = false;
     BaseConfigurable.m_bt = false;
+    BaseConfigurable.m_methodName = null;
     ConfigurableListener.m_hookCount = 0;
+    ConfigurableListener.m_methodName = null;
     ConfigurableSuccessWithListenerTest.m_bc = false;
     ConfigurableSuccessWithListenerTest.m_bm = false;
   }
@@ -39,6 +42,7 @@ public class HookableTest extends BaseTest {
     verifyTests("Passed", new String[] { "verify" }, getPassedTests());
     Assert.assertTrue(HookSuccessTest.m_hook);
     Assert.assertTrue(HookSuccessTest.m_testWasRun);
+    Assert.assertEquals(HookSuccessTest.m_parameter, "foo");
   }
 
   @Test
@@ -72,6 +76,7 @@ public class HookableTest extends BaseTest {
     Assert.assertTrue(BaseConfigurable.m_bm);
     Assert.assertTrue(BaseConfigurable.m_bs);
     Assert.assertTrue(BaseConfigurable.m_bt);
+    Assert.assertEquals(BaseConfigurable.m_methodName, "hookWasRun");
   }
 
   @Test
@@ -84,6 +89,7 @@ public class HookableTest extends BaseTest {
     Assert.assertTrue(ConfigurableSuccessWithListenerTest.m_bt);
     Assert.assertTrue(ConfigurableSuccessWithListenerTest.m_bc);
     Assert.assertTrue(ConfigurableSuccessWithListenerTest.m_bm);
+    Assert.assertEquals(ConfigurableListener.m_methodName, "hookWasRun");
   }
 
   @Test
