@@ -1,18 +1,13 @@
-package org.testng.internal.thread;
+package org.testng.internal.thread.graph;
 
-import org.testng.ITestNGMethod;
 import org.testng.collections.Lists;
 import org.testng.internal.DynamicGraph;
-import org.testng.internal.IMethodWorker;
-import org.testng.internal.IWorkerFactory;
 import org.testng.internal.DynamicGraph.Status;
-import org.testng.xml.XmlTest;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -20,25 +15,26 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * An Executor that launches tasks per batches.
+ * An Executor that launches tasks per batches. It takes a {@code DynamicGraph}
+ * of tasks to be run and a {@code IThreadWorkerFactory} to initialize/create
+ * {@code Runnable} wrappers around those tasks
  */
-public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
+public class GraphThreadPoolExecutor<T> extends ThreadPoolExecutor {
   private static final boolean DEBUG = false;
+  /** Set to true if you want to generate GraphViz graphs */
   private static final boolean DOT_FILES = false;
 
-  private DynamicGraph<ITestNGMethod> m_graph;
+  private DynamicGraph<T> m_graph;
   private List<Runnable> m_activeRunnables = Lists.newArrayList();
-  private IWorkerFactory m_factory;
-  private XmlTest m_xmlTest;
+  private IThreadWorkerFactory<T> m_factory;
   private List<String> m_dotFiles = Lists.newArrayList();
 
-  public GroupThreadPoolExecutor(IWorkerFactory factory, XmlTest xmlTest, int corePoolSize,
-      int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue,
-      DynamicGraph<ITestNGMethod> graph) {
+  public GraphThreadPoolExecutor(DynamicGraph<T> graph, IThreadWorkerFactory<T> factory, int corePoolSize,
+      int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
     super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+    ppp("Initializing executor with " + corePoolSize + " threads and following graph " + graph);
     m_graph = graph;
     m_factory = factory;
-    m_xmlTest = xmlTest;
   }
 
   public void run() {
@@ -46,7 +42,7 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
       if (DOT_FILES) {
         m_dotFiles.add(m_graph.toDot());
       }
-      Set<ITestNGMethod> freeNodes = m_graph.getFreeNodes();
+      Set<T> freeNodes = m_graph.getFreeNodes();
       runNodes(freeNodes);
     }
   }
@@ -54,10 +50,11 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
   /**
    * Create one worker per node and execute them.
    */
-  private void runNodes(Set<ITestNGMethod> nodes) {
-    List<IMethodWorker> runnables = m_factory.createWorkers(m_xmlTest, nodes);
-    for (IMethodWorker r : runnables) {
+  private void runNodes(Set<T> nodes) {
+    List<IWorker<T>> runnables = m_factory.createWorkers(nodes);
+    for (IWorker<T> r : runnables) {
       m_activeRunnables.add(r);
+      ppp("Added to active runnable");
       setStatus(r, Status.RUNNING);
       ppp("Executing: " + r);
       try {
@@ -69,10 +66,10 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
     }
   }
 
-  private void setStatus(IMethodWorker worker, Status status) {
+  private void setStatus(IWorker<T> worker, Status status) {
     ppp("Set status:" + worker + " status:" + status);
     synchronized(m_graph) {
-      for (ITestNGMethod m : worker.getMethods()) {
+      for (T m : worker.getTasks()) {
         m_graph.setStatus(m, status);
       }
     }
@@ -82,7 +79,7 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
   public void afterExecute(Runnable r, Throwable t) {
     ppp("Finished runnable:" + r);
     m_activeRunnables.remove(r);
-    setStatus((IMethodWorker) r, Status.FINISHED);
+    setStatus((IWorker<T>) r, Status.FINISHED);
     synchronized(m_graph) {
       ppp("Node count:" + m_graph.getNodeCount() + " and "
           + m_graph.getNodeCountWithStatus(Status.FINISHED));
@@ -96,7 +93,7 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
         if (DOT_FILES) {
           m_dotFiles.add(m_graph.toDot());
         }
-        Set<ITestNGMethod> freeNodes = m_graph.getFreeNodes();
+        Set<T> freeNodes = m_graph.getFreeNodes();
         runNodes(freeNodes);
       }
     }
@@ -107,7 +104,6 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
 
   private void generateFiles(List<String> files) {
     try {
-//      File dir = new File("/tmp/graphs");
       File dir = File.createTempFile("TestNG-", "");
       dir.delete();
       dir.mkdir();
@@ -127,17 +123,9 @@ public class GroupThreadPoolExecutor extends ThreadPoolExecutor {
 
   private void ppp(String string) {
     if (DEBUG) {
-      System.out.println("   [GroupThreadPoolExecutor] " + Thread.currentThread().getId() + " "
+      System.out.println("   [GraphThreadPoolExecutor] " + Thread.currentThread().getId() + " "
           + string);
     }
   }
 
-  // public void addRunnable(int i, Runnable runnable) {
-  // List<TestMethodWorker> l = m_runnables.get(i);
-  // if (l == null) {
-  // l = new ArrayList<TestMethodWorker>();
-  // m_runnables.put(i, l);
-  // }
-  // l.add(runnable);
-  // }
 }
