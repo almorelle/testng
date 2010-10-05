@@ -257,7 +257,7 @@ public class Assert {
    * @param message the assertion error message 
    */
   static public void assertEquals(long actual, long expected, String message) {
-    assertEquals(new Long(actual), new Long(expected), message);
+    assertEquals(Long.valueOf(actual), Long.valueOf(expected), message);
   }
   
   /**
@@ -299,7 +299,7 @@ public class Assert {
    * @param message the assertion error message 
    */
   static public void assertEquals(byte actual, byte expected, String message) {
-    assertEquals(new Byte(actual), new Byte(expected), message);
+    assertEquals(Byte.valueOf(actual), Byte.valueOf(expected), message);
   }
   
   /**
@@ -320,7 +320,7 @@ public class Assert {
    * @param message the assertion error message 
    */
   static public void assertEquals(char actual, char expected, String message) {
-    assertEquals(new Character(actual), new Character(expected), message);
+    assertEquals(Character.valueOf(actual), Character.valueOf(expected), message);
   }
   
   /**
@@ -341,7 +341,7 @@ public class Assert {
    * @param message the assertion error message 
    */
   static public void assertEquals(short actual, short expected, String message) {
-    assertEquals(new Short(actual), new Short(expected), message);
+    assertEquals(Short.valueOf(actual), Short.valueOf(expected), message);
   }
   
   /**
@@ -362,7 +362,7 @@ public class Assert {
    * @param message the assertion error message 
    */
   static public void assertEquals(int actual,  int expected, String message) {
-    assertEquals(new Integer(actual), new Integer(expected), message);
+    assertEquals(Integer.valueOf(actual), Integer.valueOf(expected), message);
   }
   
   /**
@@ -512,7 +512,7 @@ public class Assert {
     
     if (actual == null || expected == null) {
       if (message != null) fail(message);
-      else fail("Arrays not equal: " + expected + " and " + actual);
+      else fail("Collections not equal: expected: " + expected + " and actual: " + actual);
     }
     
     assertEquals(actual.size(), expected.size(), message + ": lists don't have the same size");
@@ -544,7 +544,7 @@ public class Assert {
     
     if ((actual == null && expected != null) || (actual != null && expected == null)) {
       if (message != null) fail(message);
-      else fail("Arrays not equal: " + expected + " and " + actual);
+      else fail("Arrays not equal: " + Arrays.toString(expected) + " and " + Arrays.toString(actual));
     }
     assertEquals(Arrays.asList(actual), Arrays.asList(expected), message);
   }
@@ -561,7 +561,7 @@ public class Assert {
     
     if ((actual == null && expected != null) || (actual != null && expected == null)) {
       failAssertNoEqual(actual, expected,
-          "Arrays not equal: " + expected + " and " + actual,
+          "Arrays not equal: " + Arrays.toString(expected) + " and " + Arrays.toString(actual),
           message);
     }
     
@@ -580,7 +580,7 @@ public class Assert {
     }
     if (actualCollection.size() != 0) {
       failAssertNoEqual(actual, expected,
-          "Arrays not equal: " + expected + " and " + actual,
+          "Arrays not equal: " + Arrays.toString(expected) + " and " + Arrays.toString(actual),
           message);
     }
   }
@@ -659,6 +659,12 @@ public class Assert {
    * Asserts that two sets are equal.
    */
   static public void assertEquals(Set actual, Set expected) {
+    if(actual == expected) return;
+
+    if (actual == null || expected == null) {
+      fail("Sets not equal: expected: " + expected + " and actual: " + actual);
+    }
+
     if (!actual.equals(expected)) {
       fail("Sets differ: expected " + expected + " but got " + actual);
     }
@@ -668,9 +674,15 @@ public class Assert {
    * Asserts that two maps are equal.
    */
   static public void assertEquals(Map actual, Map expected) {
-      if (!actual.equals(expected)) {
-        fail("Maps differ: expected " + expected + " but got " + actual);
-      }
+    if(actual == expected) return;
+
+    if (actual == null || expected == null) {
+      fail("Maps not equal: expected: " + expected + " and actual: " + actual);
     }
+
+    if (!actual.equals(expected)) {
+      fail("Maps differ: expected " + expected + " but got " + actual);
+    }
+  }
 
 }

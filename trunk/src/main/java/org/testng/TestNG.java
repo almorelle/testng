@@ -13,6 +13,7 @@ import org.testng.collections.Lists;
 import org.testng.collections.Maps;
 import org.testng.internal.AnnotationTypeEnum;
 import org.testng.internal.ClassHelper;
+import org.testng.internal.DynamicGraph;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.IResultListener;
 import org.testng.internal.TestNGGuiceModule;
@@ -20,6 +21,9 @@ import org.testng.internal.Utils;
 import org.testng.internal.annotations.DefaultAnnotationTransformer;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.internal.annotations.Sets;
+import org.testng.internal.thread.graph.GraphThreadPoolExecutor;
+import org.testng.internal.thread.graph.IThreadWorkerFactory;
+import org.testng.internal.thread.graph.SuiteWorkerFactory;
 import org.testng.internal.version.VersionInfo;
 import org.testng.log4testng.Logger;
 import org.testng.remote.SuiteDispatcher;
@@ -40,7 +44,6 @@ import org.xml.sax.SAXException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -50,13 +53,8 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -103,19 +101,10 @@ public class TestNG {
   public static final String DEFAULT_COMMAND_LINE_SUITE_NAME = "Command line suite";
 
   /** The default name for a test launched from the command line */
-  public static final String DEFAULT_COMMAND_LINE_TEST_NAME = "Command line test";
+  private static final String DEFAULT_COMMAND_LINE_TEST_NAME = "Command line test";
 
   /** The default name of the result's output directory. */
-  public static final String DEFAULT_OUTPUTDIR = "test-output";
-
-  /** A separator constant (semi-colon). */
-  public static final String SRC_SEPARATOR = ";";
-
-  /** The JDK50 annotation type ID ("JDK5").*/
-  public static final String JDK_ANNOTATION_TYPE = AnnotationTypeEnum.JDK.getName();
-
-  /** The JavaDoc annotation type ID ("javadoc"). */
-  public static final String JAVADOC_ANNOTATION_TYPE = AnnotationTypeEnum.JAVADOC.getName();
+  private static final String DEFAULT_OUTPUTDIR = "test-output";
 
   /** System properties */
   public static final String SHOW_TESTNG_STACK_FRAMES = "testng.show.stack.frames";
@@ -127,11 +116,8 @@ public class TestNG {
 
   private List<String> m_commandLineMethods;
   protected List<XmlSuite> m_suites = Lists.newArrayList();
-  protected List<XmlSuite> m_cmdlineSuites;
-  protected String m_outputDir = DEFAULT_OUTPUTDIR;
-
-  /** The source directories as set by setSourcePath (or testng-sourcedir-override.properties). */
-  protected String[] m_sourceDirs;
+  private List<XmlSuite> m_cmdlineSuites;
+  private String m_outputDir = DEFAULT_OUTPUTDIR;
 
   /**
    * The annotation type for suites/tests that have not explicitly set this attribute.
@@ -140,26 +126,26 @@ public class TestNG {
    */
   private AnnotationTypeEnum m_defaultAnnotations = VersionInfo.getDefaultAnnotationType();
 
-  protected String[] m_includedGroups;
-  protected String[] m_excludedGroups;
+  private String[] m_includedGroups;
+  private String[] m_excludedGroups;
 
   private Boolean m_isJUnit = Boolean.FALSE;
   protected boolean m_useDefaultListeners = true;
 
-  protected ITestRunnerFactory m_testRunnerFactory;
+  private ITestRunnerFactory m_testRunnerFactory;
 
   // These listeners can be overridden from the command line
-  protected List<ITestListener> m_testListeners = Lists.newArrayList();
-  protected List<ISuiteListener> m_suiteListeners = Lists.newArrayList();
+  private List<ITestListener> m_testListeners = Lists.newArrayList();
+  private List<ISuiteListener> m_suiteListeners = Lists.newArrayList();
   private Set<IReporter> m_reporters = Sets.newHashSet();
 
-  public static final int HAS_FAILURE = 1;
-  public static final int HAS_SKIPPED = 2;
-  public static final int HAS_FSP = 4;
-  public static final int HAS_NO_TEST = 8;
+  protected static final int HAS_FAILURE = 1;
+  protected static final int HAS_SKIPPED = 2;
+  protected static final int HAS_FSP = 4;
+  protected static final int HAS_NO_TEST = 8;
 
-  protected int m_status;
-  protected boolean m_hasTests= false;
+  private int m_status;
+  private boolean m_hasTests= false;
 
   private String m_slavefileName = null;
   private String m_masterfileName = null;
@@ -179,7 +165,7 @@ public class TestNG {
 
   private IObjectFactory m_objectFactory;
 
-  protected List<IInvokedMethodListener> m_invokedMethodListeners = Lists.newArrayList();
+  private List<IInvokedMethodListener> m_invokedMethodListeners = Lists.newArrayList();
 
   private Integer m_dataProviderThreadCount = null;
 
@@ -217,7 +203,7 @@ public class TestNG {
     return m_status;
   }
 
-  protected void setStatus(int status) {
+  private void setStatus(int status) {
     m_status |= status;
   }
 
@@ -251,27 +237,6 @@ public class TestNG {
   /**
    * Sets the default annotation type for suites that have not explicitly set the
    * annotation property. The target is used only in JDK5+.
-   * @param target the default annotation type. This is one of the two constants
-   * (TestNG.JAVADOC_ANNOTATION_TYPE or TestNG.JDK_ANNOTATION_TYPE).
-   * For backward compatibility reasons we accept "1.4", "1.5". Any other value will
-   * default to TestNG.JDK_ANNOTATION_TYPE.
-   *
-   * @deprecated use the setDefaultAnnotationType replacement method.
-   */
-//  @Deprecated
-//  public void setTarget(String target) {
-//    // Target is used only in JDK 1.5 and may get null in JDK 1.4
-//    LOGGER.warn("The usage of " + CommandLineArgs.TARGET_COMMAND + " option is deprecated." +
-//            " Please use " + CommandLineArgs.ANNOTATIONS_COMMAND + " instead.");
-//    if (null == target) {
-//      return;
-//    }
-//    setAnnotations(target);
-//  }
-
-  /**
-   * Sets the default annotation type for suites that have not explicitly set the
-   * annotation property. The target is used only in JDK5+.
    * @param annotationType the default annotation type. This is one of the two constants
    * (TestNG.JAVADOC_ANNOTATION_TYPE or TestNG.JDK_ANNOTATION_TYPE).
    * For backward compatibility reasons we accept "1.4", "1.5". Any other value will
@@ -287,53 +252,6 @@ public class TestNG {
     if(null != annotationType) {
       m_defaultAnnotations= annotationType;
     }
-  }
-
-  /**
-   * Sets the ; separated path of source directories. This is used only with JavaDoc type
-   * annotations. The directories do not have to be the root of a class hierarchy. For
-   * example, "c:\java\src\org\testng" is a valid directory.
-   *
-   * If a resource named "testng-sourcedir-override.properties" is found in the classpath,
-   * it will override this call. "testng-sourcedir-override.properties" must contain a
-   * sourcedir property initialized with a semi-colon list of directories. For example:
-   *
-   * sourcedir=c:\java\src\org\testng;D:/dir2
-   *
-   * Considering the syntax of a properties file, you must escape the usage of : and = in
-   * your paths.
-   * Note that for the override to occur, this method must be called. i.e. it is not sufficient
-   * to place "testng-sourcedir-override.properties" in the classpath.
-   *
-   * @param sourcePaths a semi-colon separated list of source directories.
-   */
-  public void setSourcePath(String sourcePaths) {
-    LOGGER.debug("setSourcePath: \"" + sourcePaths + "\"");
-
-    // This is an optimization to reduce the sourcePath scope
-    // Is it OK to look only for the Thread context class loader?
-    InputStream is = Thread.currentThread().getContextClassLoader()
-      .getResourceAsStream("testng-sourcedir-override.properties");
-
-    // Resource exists. Use override values and ignore given value
-    if (is != null) {
-      Properties props = new Properties();
-      try {
-        props.load(is);
-      }
-      catch (IOException e) {
-        throw new RuntimeException("Error loading testng-sourcedir-override.properties", e);
-      }
-      sourcePaths = props.getProperty("sourcedir");
-      LOGGER.debug("setSourcePath ignoring sourcepath parameter and "
-          + "using testng-sourcedir-override.properties: \"" + sourcePaths + "\"");
-
-    }
-    if (null == sourcePaths || "".equals(sourcePaths.trim())) {
-      return;
-    }
-
-    m_sourceDirs = Utils.split(sourcePaths, SRC_SEPARATOR);
   }
 
   /**
@@ -665,7 +583,7 @@ public class TestNG {
   }
 
 
-  protected void setTestRunnerFactoryClass(Class testRunnerFactoryClass) {
+  private void setTestRunnerFactoryClass(Class testRunnerFactoryClass) {
     setTestRunnerFactory((ITestRunnerFactory) ClassHelper.newInstance(testRunnerFactoryClass));
   }
 
@@ -783,7 +701,7 @@ public class TestNG {
 
   private Integer m_suiteThreadPoolSize = CommandLineArgs.SUITE_THREAD_POOL_SIZE_DEFAULT;
 
-  private boolean m_randomizeSuites = Boolean.valueOf(CommandLineArgs.RANDOMIZE_SUITES);
+  private boolean m_randomizeSuites = Boolean.FALSE;
 
   /**
    * Sets the level of verbosity. This value will override the value specified
@@ -922,6 +840,7 @@ public class TestNG {
   }
 
   private static void usage() {
+    if (m_jCommander == null) m_jCommander = new JCommander(new CommandLineArgs());
     m_jCommander.usage();
   }
 
@@ -961,40 +880,38 @@ public class TestNG {
          * size is 1, we run this block
          */
         for (XmlSuite xmlSuite : m_suites) {
-          SuiteRunnerWorker srw = new SuiteRunnerWorker(xmlSuite, suiteRunnerMap,
-                   m_verbose, getDefaultSuiteName());
-          srw.run();
+          runSuitesSequentially(xmlSuite, suiteRunnerMap, m_verbose, getDefaultSuiteName());
         }
       } else {
-         /*
-          * Create an executor service here and share it between all SuiteRunnerWorkers
-          */
-         ExecutorService pooledExecutor =
-            new ThreadPoolExecutor(m_suiteThreadPoolSize, m_suiteThreadPoolSize,
-            Integer.MAX_VALUE, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>());
+        /*
+         * Generate a dynamic graph that stores the suite hierarchy. This is then
+         * used to run related suites in specific order. Parent suites are run only
+         * once all the child suites have completed execution
+         */
+        DynamicGraph<ISuite> suiteGraph = new DynamicGraph<ISuite>();
+        for (XmlSuite xmlSuite : m_suites) {
+          populateSuiteGraph(suiteGraph, suiteRunnerMap, xmlSuite);
+        }
 
-         final CountDownLatch endGate = new CountDownLatch(m_suites.size());
-         for (XmlSuite xmlSuite : m_suites) {
-           SuiteRunnerWorker srw = new SuiteRunnerWorker(xmlSuite, suiteRunnerMap,
-                   pooledExecutor, m_verbose, getDefaultSuiteName(), endGate);
-           try {
-             pooledExecutor.execute(srw);
-           }
-           catch(RejectedExecutionException reex) {
-             LOGGER.error("Executor rejected execution of " + xmlSuite.getName() +
-                      " suite. Message: " + reex.getMessage());
-           }
-         }
+        IThreadWorkerFactory<ISuite> factory = new SuiteWorkerFactory(suiteRunnerMap,
+          m_verbose, getDefaultSuiteName());
+        GraphThreadPoolExecutor<ISuite> pooledExecutor =
+          new GraphThreadPoolExecutor<ISuite>(suiteGraph, factory, m_suiteThreadPoolSize,
+          m_suiteThreadPoolSize, Integer.MAX_VALUE, TimeUnit.MILLISECONDS,
+          new LinkedBlockingQueue<Runnable>());
 
-         try {
-           endGate.await(); //wait for all the suites to finish execution
-           pooledExecutor.shutdown();
-         }
-         catch(InterruptedException e) {
-           Thread.currentThread().interrupt();
-           LOGGER.error("Error waiting for concurrent executors to finish " + e.getMessage());
-         }
+        Utils.log("TestNG", 2, "Starting executor for all suites");
+        //run all suites in parallel
+        pooledExecutor.run();
+        try {
+          //TODO: Setting timeout to Long.MAX_VALUE. Is it correct/ok?
+          pooledExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+          pooledExecutor.shutdownNow();
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          LOGGER.error("Error waiting for concurrent executors to finish " + e.getMessage());
+        }
       }
     }
     else {
@@ -1009,6 +926,56 @@ public class TestNG {
     return Lists.newArrayList(suiteRunnerMap.values());
   }
 
+  /**
+   * Recursively runs suites. Runs the children suites before running the parent
+   * suite. This is done so that the results for parent suite can reflect the
+   * combined results of the children suites.
+   *
+   * @param xmlSuite XML Suite to be executed
+   * @param suiteRunnerMap Maps {@code XmlSuite}s to respective {@code ISuite}
+   * @param verbose verbose level
+   * @param defaultSuiteName default suite name
+   */
+  private void runSuitesSequentially(XmlSuite xmlSuite,
+      Map<XmlSuite, ISuite> suiteRunnerMap, int verbose, String defaultSuiteName) {
+    for (XmlSuite childSuite : xmlSuite.getChildSuites()) {
+      runSuitesSequentially(childSuite, suiteRunnerMap, verbose, defaultSuiteName);
+    }
+    SuiteRunnerWorker srw = new SuiteRunnerWorker(suiteRunnerMap.get(xmlSuite), suiteRunnerMap,
+      verbose, defaultSuiteName);
+    srw.run();
+  }
+
+  /**
+   * Populates the dynamic graph with the reverse hierarchy of suites. Edges are
+   * added pointing from child suite runners to parent suite runners, hence making
+   * parent suite runners dependent on all the child suite runners
+   *
+   * @param suiteGraph dynamic graph representing the reverse hierarchy of SuiteRunners
+   * @param suiteRunnerMap Map with XMLSuite as key and its respective SuiteRunner as value
+   * @param xmlSuite XML Suite
+   */
+  private void populateSuiteGraph(DynamicGraph<ISuite> suiteGraph /* OUT */, 
+      Map<XmlSuite, ISuite> suiteRunnerMap, XmlSuite xmlSuite) {
+    ISuite parentSuiteRunner = suiteRunnerMap.get(xmlSuite);
+    if (xmlSuite.getChildSuites().isEmpty()) {
+      suiteGraph.addNode(parentSuiteRunner);
+    }
+    else {
+      for (XmlSuite childSuite : xmlSuite.getChildSuites()) {
+        suiteGraph.addEdge(parentSuiteRunner, suiteRunnerMap.get(childSuite));
+        populateSuiteGraph(suiteGraph, suiteRunnerMap, childSuite);
+      }
+    }
+  }
+
+  /**
+   * Creates the {@code SuiteRunner}s and populates the suite runner map with 
+   * this information
+   * @param suiteRunnerMap Map with XMLSuite as key and it's respective 
+   *   SuiteRunner as value. This is updated as part of this method call
+   * @param xmlSuite Xml Suite (and it's children) for which {@code SuiteRunner}s are created
+   */
   private void createSuiteRunners(Map<XmlSuite, ISuite> suiteRunnerMap /* OUT */, XmlSuite xmlSuite) {
     xmlSuite.setDefaultAnnotations(m_defaultAnnotations.toString());
 
@@ -1067,7 +1034,7 @@ public class TestNG {
    * @param xmlSuite
    * @return returns the newly created suite runner
    */
-  protected SuiteRunner createSuiteRunner(XmlSuite xmlSuite) {
+  private SuiteRunner createSuiteRunner(XmlSuite xmlSuite) {
     initializeInjector();
     SuiteRunner result = new SuiteRunner(getConfiguration(), xmlSuite,
         m_outputDir,
@@ -1113,10 +1080,6 @@ public class TestNG {
    * @param argv
    * @param listener
    * @return
-   */
-  /**
-   * @param argv
-   * @param listener
    */
   public static TestNG privateMain(String[] argv, ITestListener listener) {
     TestNG result = new TestNG();
@@ -1256,7 +1219,7 @@ public class TestNG {
     if (cla.suiteFiles != null) setTestSuites(cla.suiteFiles);
 
     setSuiteThreadPoolSize(cla.suiteThreadPoolSize);
-    setRandomizeSuites(Boolean.valueOf(cla.randomizeSuites));
+    setRandomizeSuites(cla.randomizeSuites);
   }
 
   public void setSuiteThreadPoolSize(Integer suiteThreadPoolSize) {
@@ -1272,11 +1235,22 @@ public class TestNG {
    }
 
   /**
+   * This method is invoked by Maven's Surefire, only remove it once
+   * Surefire has been modified to no longer call it.
+   */
+  public void setSourcePath(String path) {
+    // nop
+  }
+
+  /**
    * This method is invoked by Maven's Surefire to configure the runner,
    * do not remove unless you know for sure that Surefire has been updated
    * to use the new configure(CommandLineArgs) method.
+   * 
+   * @deprecated use new configure(CommandLineArgs) method
    */
   @SuppressWarnings({"unchecked"})
+  @Deprecated
   public void configure(Map cmdLineArgs) {
     CommandLineArgs result = new CommandLineArgs();
 
@@ -1296,11 +1270,6 @@ public class TestNG {
       result.testNames = testNames;
     }
 
-//    List<String> testNgXml = (List<String>) cmdLineArgs.get(CommandLineArgs.SUITE_DEF);
-//    if (null != testNgXml) {
-//      setTestSuites(testNgXml);
-//    }
-
     String useDefaultListeners = (String) cmdLineArgs.get(CommandLineArgs.USE_DEFAULT_LISTENERS);
     if (null != useDefaultListeners) {
       result.useDefaultListeners = useDefaultListeners;
@@ -1319,12 +1288,12 @@ public class TestNG {
       result.parallelMode = parallelMode;
     }
 
-    // TODO: verify that Surefire is passing an Integer here
-    Integer threadCount = (Integer) cmdLineArgs.get(CommandLineArgs.THREAD_COUNT);
+    String threadCount = (String) cmdLineArgs.get(CommandLineArgs.THREAD_COUNT);
     if (threadCount != null) {
-      result.threadCount = threadCount;
+      result.threadCount = Integer.parseInt(threadCount);
     }
-    // TODO: verify that Surefire is passing an Integer here
+
+    // Not supported by Surefire yet
     Integer dptc = (Integer) cmdLineArgs.get(CommandLineArgs.DATA_PROVIDER_THREAD_COUNT);
     if (dptc != null) {
       result.dataProviderThreadCount = dptc;
@@ -1339,9 +1308,11 @@ public class TestNG {
       result.testName = defaultTestName;
     }
 
-    String strClass = (String) cmdLineArgs.get(CommandLineArgs.LISTENER);
-    if (null != strClass) {
-      result.listener = strClass;
+    Object listeners = cmdLineArgs.get(CommandLineArgs.LISTENER);
+    if (listeners instanceof List) {
+      result.listener = Utils.joinClasses((List<Class>) listeners, " ");
+    } else {
+      result.listener = (String) listeners;
     }
 
     String ms = (String) cmdLineArgs.get(CommandLineArgs.METHOD_SELECTORS);
@@ -1368,6 +1339,8 @@ public class TestNG {
     if (failurePolicy != null) {
       result.configFailurePolicy = failurePolicy;
     }
+
+    configure(result);
   }
 
   private void setTestNames(List<String> testNames) {
@@ -1428,56 +1401,10 @@ public class TestNG {
    *
    * @return true if this is the JDK 1.4 JAR version of TestNG, false otherwise.
    */
+  @Deprecated
   public static boolean isJdk14() {
-    return VersionInfo.IS_JDK14;
+    return false;
   }
-
-  /**
-   * Checks TestNG preconditions. For example, this method makes sure that if this is the
-   * JDK 1.4 version of TestNG, a source directory has been specified. This method calls
-   * System.exit(-1) or throws an exception if the preconditions are not satisfied.
-   *
-   * @param params the parsed command line parameters.
-   */
-//  @SuppressWarnings({"unchecked"})
-//  protected static Map checkConditions(Map params) {
-//    // TODO CQ document why sometimes we throw exceptions and sometimes we exit.
-//    String testClasses = (String) params.get(CommandLineArgs.TESTCLASS_COMMAND);
-//    List<String> testNgXml = (List<String>) params.get(CommandLineArgs.SUITE_DEF);
-//    Object testJar = params.get(CommandLineArgs.TESTJAR_COMMAND);
-//    Object slave = params.get(CommandLineArgs.SLAVE);
-//
-//    if (testClasses == null && testNgXml == null && slave == null && testJar == null) {
-//      System.err.println("You need to specify at least one testng.xml or one class");
-//      usage();
-//      System.exit(-1);
-//    }
-//
-//    if (VersionInfo.IS_JDK14) {
-//      String srcPath = (String) params.get(CommandLineArgs.SRC_COMMAND);
-//
-//      if ((null == srcPath) || "".equals(srcPath)) {
-//        throw new TestNGException("No sourcedir was specified");
-//      }
-//    }
-//
-//    String groups = (String) params.get(CommandLineArgs.GROUPS_COMMAND);
-//    String excludedGroups = (String) params.get(CommandLineArgs.EXCLUDED_GROUPS_COMMAND);
-//
-//    if (testJar == null &&
-//        (null != groups || null != excludedGroups) && testClasses == null && testNgXml == null) {
-//      throw new TestNGException("Groups option should be used with testclass option");
-//    }
-//
-//    // -slave & -master can't be set together
-//    if (params.containsKey(CommandLineArgs.SLAVE) &&
-//   		 params.containsKey(CommandLineArgs.MASTER)) {
-//   	 throw new TestNGException(CommandLineArgs.SLAVE + " can't be combined with " +
-//   	                           CommandLineArgs.MASTER);
-//    }
-//
-//    return params;
-//  }
 
   /**
    * Double check that the command line parameters are valid.
@@ -1630,7 +1557,7 @@ public class TestNG {
   }
 
   public static class ExitCodeListener implements IResultListener {
-    protected TestNG m_mainRunner;
+    private TestNG m_mainRunner;
 
     public ExitCodeListener() {
       m_mainRunner = TestNG.m_instance;

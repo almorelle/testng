@@ -8,9 +8,9 @@ import org.testng.ITestNGMethod;
 import org.testng.ITestResult;
 import org.testng.collections.Lists;
 import org.testng.internal.thread.ThreadUtil;
+import org.testng.internal.thread.graph.IWorker;
 import org.testng.xml.XmlSuite;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,20 +28,18 @@ import java.util.Set;
  * @author <a href="mailto:cedric@beust.com">Cedric Beust</a>
  * @author <a href='mailto:the_mindstorm[at]evolva[dot]ro'>Alexandru Popescu</a>
  */
-public class TestMethodWorker implements IMethodWorker {
+public class TestMethodWorker implements IWorker<ITestNGMethod> {
   // Map of the test methods and their associated instances
   // It has to be a set because the same method can be passed several times
   // and associated to a different instance
-  protected IMethodInstance[] m_testMethods;
-  protected IInvoker m_invoker = null;
-  protected Map<String, String> m_parameters = null;
-  protected XmlSuite m_suite = null;
-//  protected Map<ITestClass, Set<Object>> m_invokedBeforeClassMethods = null;
-//  protected Map<ITestClass, Set<Object>> m_invokedAfterClassMethods = null;
-  protected ITestNGMethod[] m_allTestMethods;
-  protected List<ITestResult> m_testResults = Lists.newArrayList();
-  protected ConfigurationGroupMethods m_groupMethods = null;
-  protected ClassMethodMap m_classMethodMap = null;
+  private IMethodInstance[] m_testMethods;
+  private IInvoker m_invoker = null;
+  private Map<String, String> m_parameters = null;
+  private XmlSuite m_suite = null;
+  private ITestNGMethod[] m_allTestMethods;
+  private List<ITestResult> m_testResults = Lists.newArrayList();
+  private ConfigurationGroupMethods m_groupMethods = null;
+  private ClassMethodMap m_classMethodMap = null;
   private ITestContext m_testContext = null;
   
   public TestMethodWorker(IInvoker invoker, 
@@ -71,7 +69,7 @@ public class TestMethodWorker implements IMethodWorker {
    * 
    * @return the max timeout or 0 if no timeout was specified
    */
-  public long getMaxTimeOut() {
+  public long getTimeOut() {
     long result = 0;
     for (IMethodInstance mi : m_testMethods) {
       ITestNGMethod tm = mi.getMethod();
@@ -254,7 +252,9 @@ public class TestMethodWorker implements IMethodWorker {
     m_allTestMethods = allTestMethods;
   }
 
-  public List<ITestNGMethod> getMethods() {
+  @Override
+  public List<ITestNGMethod> getTasks()
+  {
     List<ITestNGMethod> result = Lists.newArrayList();
     for (IMethodInstance m : m_testMethods) {
       result.add(m.getMethod());
@@ -262,7 +262,7 @@ public class TestMethodWorker implements IMethodWorker {
     return result;
   }
 
-  public int compareTo(IMethodWorker other) {
+  public int compareTo(IWorker<ITestNGMethod> other) {
     return getPriority() - other.getPriority();
   }
 
@@ -291,11 +291,5 @@ class SingleTestMethodWorker extends TestMethodWorker {
           EMPTY_GROUP_METHODS,
           null,
           testContext);
-  }
-
-  protected void invokeAfterClassMethods(ITestClass testClass, ITestNGMethod tm) {
-  }
-
-  protected void invokeBeforeClassMethods(ITestClass testClass) {
   }
 }

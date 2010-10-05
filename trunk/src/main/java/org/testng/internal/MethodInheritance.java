@@ -18,12 +18,11 @@ public class MethodInheritance {
   private static List<ITestNGMethod> findMethodListSuperClass(Map<Class, List<ITestNGMethod>> map, 
       Class< ? extends ITestNGMethod> methodClass)
   {
-    for (Class cls : map.keySet()) {
-      if (cls.isAssignableFrom(methodClass)) {
-        return map.get(cls);
+    for (Map.Entry<Class, List<ITestNGMethod>> entry : map.entrySet()) {
+      if (entry.getKey().isAssignableFrom(methodClass)) {
+        return entry.getValue();
       }
     }
-    
     return null;
   }
   
@@ -119,7 +118,7 @@ public class MethodInheritance {
   
   private static boolean internalDependencyExists(ITestNGMethod m1, ITestNGMethod m2, ITestNGMethod[] methods) {
     ITestNGMethod[] methodsNamed = 
-      MethodHelper.findMethodsNamed(m1, methods, m1.getMethodsDependedUpon());
+      MethodHelper.findDependedUponMethods(m1, methods);
 
     for (ITestNGMethod method : methodsNamed) {
       if (method.equals(m2)) {
@@ -129,7 +128,7 @@ public class MethodInheritance {
 
     for (String group : m1.getGroupsDependedUpon()) {
       ITestNGMethod[] methodsThatBelongToGroup = 
-        MethodHelper.findMethodsThatBelongToGroup(m1, methods, group);
+        MethodGroupsHelper.findMethodsThatBelongToGroup(m1, methods, group);
       for (ITestNGMethod method : methodsThatBelongToGroup) {
          if (method.equals(m2)) {
            return true;

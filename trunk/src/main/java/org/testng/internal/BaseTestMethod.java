@@ -10,6 +10,7 @@ import org.testng.collections.Maps;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.internal.thread.IAtomicInteger;
 import org.testng.internal.thread.ThreadUtil;
+import org.testng.xml.XmlTest;
 
 import java.lang.reflect.Method;
 import java.util.Comparator;
@@ -20,8 +21,11 @@ import java.util.Map;
  * Superclass to represent both &#64;Test and &#64;Configuration methods.
  */
 public abstract class BaseTestMethod implements ITestNGMethod {
-  /** The test class on which the test method was found. Note that this is not 
-   * necessarily the declaring class. */
+  private static final long serialVersionUID = -2666032602580652173L;
+  /** 
+   * The test class on which the test method was found. Note that this is not 
+   * necessarily the declaring class. 
+   */
   protected ITestClass m_testClass;
   
   protected final transient Class<?> m_methodClass;
@@ -50,9 +54,15 @@ public abstract class BaseTestMethod implements ITestNGMethod {
 
   private List<Integer> m_invocationNumbers = Lists.newArrayList();
   private List<Integer> m_failedInvocationNumbers = Lists.newArrayList();
+  /**
+   * {@inheritDoc}
+   */
+  private long m_timeOut = 0;
   
   private boolean m_ignoreMissingDependencies;
   private int m_priority;
+
+  private XmlTest m_xmlTest;
 
   /**
    * Constructs a <code>BaseTestMethod</code> TODO cquezel JavaDoc.
@@ -261,9 +271,14 @@ public abstract class BaseTestMethod implements ITestNGMethod {
    * {@inheritDoc}
    */
   public long getTimeOut() {
-    return 0L;
+    long result = m_timeOut != 0 ? m_timeOut : (m_xmlTest != null ? m_xmlTest.getTimeOut(0) : 0);
+    return result;
   }
-  
+
+  public void setTimeOut(long timeOut) {
+    m_timeOut = timeOut;
+  }
+
   /**
    * {@inheritDoc}  
    * @return the number of times this method needs to be invoked.
@@ -329,18 +344,20 @@ public abstract class BaseTestMethod implements ITestNGMethod {
    */
   @Override
   public boolean equals(Object obj) {
-    // TODO CQ document why this try block exists.
-    try {
-      BaseTestMethod other = (BaseTestMethod) obj;
-      
-      boolean isEqual = m_testClass == null ? other.m_testClass == null
-          : m_testClass.getRealClass().equals(other.m_testClass.getRealClass());
-      
-      return isEqual && m_method.equals(other.m_method);
-    }
-    catch(Exception ex) {
+    if (this == obj)
+      return true;
+    if (obj == null)
       return false;
-    }
+    if (getClass() != obj.getClass())
+      return false;
+    
+    BaseTestMethod other = (BaseTestMethod) obj;
+    
+    boolean isEqual = m_testClass == null ? other.m_testClass == null
+        : other.m_testClass != null && 
+          m_testClass.getRealClass().equals(other.m_testClass.getRealClass());
+    
+    return isEqual && m_method.equals(other.m_method);
   }
   
   /**
@@ -653,5 +670,13 @@ public abstract class BaseTestMethod implements ITestNGMethod {
   
   public void setPriority(int priority) {
     m_priority = priority;
+  }
+
+  public XmlTest getXmlTest() {
+    return m_xmlTest;
+  }
+
+  public void setXmlTest(XmlTest xmlTest) {
+    m_xmlTest = xmlTest;
   }
 }

@@ -22,8 +22,8 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -79,19 +79,6 @@ public final class Utils {
 
     return result.toArray(new XmlClass[classes.length]);
   }
-  
-  /**
-   * Find all the classes inside this array, including nested ones.
-   * @param classes
-   * @return
-   */
-//  private static void findAllClasses(Class<?>[] classes, Map<Class<?>, Class<?>> result) {
-//    for (Class<?> cls : classes) {
-//      if (!result.containsKey(cls)) {
-//        result.put(cls, cls);
-//      }
-//    }
-//  }
 
   public static String[] parseMultiLine(String line) {
     List<String> vResult = Lists.newArrayList();
@@ -104,9 +91,7 @@ public final class Utils {
       //      result = line.split(" ");
     }
 
-    String[] result = vResult.toArray(new String[vResult.size()]);
-
-    return result;
+    return vResult.toArray(new String[vResult.size()]);
   }
 
   /**
@@ -228,10 +213,8 @@ public final class Utils {
    */
   public static void dumpMap(Map<?, ?> result) {
     System.out.println("vvvvv");
-    for (Iterator<?> it = result.keySet().iterator(); it.hasNext();) {
-      Object key = it.next();
-      Object value = result.get(key);
-      System.out.println(key + " => " + value);
+    for (Map.Entry<?, ?> entry : result.entrySet()) {
+      System.out.println(entry.getKey() + " => " + entry.getValue());
     }
     System.out.println("^^^^^");
   }
@@ -512,28 +495,6 @@ public final class Utils {
         shortStackTrace, fullStackTrace
     };
   }
-
-//  private static String replaceAmpersand(String str, Pattern pattern) {
-//    int start = 0;
-//    int idx = str.indexOf('&', start);
-//    if(idx == -1) return str;
-//    StringBuffer result= new StringBuffer();
-//    while(idx != -1) {
-//      result.append(str.substring(start, idx));
-//      if(pattern.matcher(str.substring(idx)).matches()) {
-//        // do nothing it is an entity;
-//        result.append("&");
-//      }
-//      else {
-//        result.append("&amp;");
-//      }
-//      start= idx + 1;
-//      idx= str.indexOf('&', start);
-//    }
-//    result.append(str.substring(start));
-//
-//    return result.toString();
-//  }
   
   private static final Map<Character, String> ESCAPES = new HashMap<Character, String>() {{
     put('<', "&lt;");
@@ -678,16 +639,16 @@ public final class Utils {
   }
 
   public static String arrayToString(String[] strings) {
-    String result = "";
+    StringBuffer result = new StringBuffer("");
     if ((strings != null) && (strings.length > 0)) {
       for (int i = 0; i < strings.length; i++) {
-        result += strings[i];
+        result.append(strings[i]);
         if (i < strings.length - 1) {
-          result += ", ";
+          result.append(", ");
         }
       }
     }
-    return result;
+    return result.toString();
   }
 
   /**
@@ -711,5 +672,27 @@ public final class Utils {
    }
   
    return fileName;
+  }
+
+  public static String join(Collection<String> strings, String separator) {
+    StringBuilder sb = new StringBuilder();
+    int i = 0;
+    for (String s : strings) {
+      if (i++ > 0) sb.append(separator);
+      sb.append(s);
+    }
+
+    return sb.toString();
+  }
+
+  public static String joinClasses(List<Class> classes, String separator) {
+    StringBuilder sb = new StringBuilder();
+    int i = 0;
+    for (Class s : classes) {
+      if (i++ > 0) sb.append(separator);
+      sb.append(s.getName());
+    }
+
+    return sb.toString();
   }
 }
